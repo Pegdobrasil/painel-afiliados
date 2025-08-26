@@ -1,6 +1,6 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwVsxY7z92FqRlsgN0n1jrMk1qLBJn7DVFD1K3XhiWjWtIf4PWzh45nC3di7gJzEzUT/exec";
+const API_URL = "https://script.google.com/macros/s/SEU_SCRIPT_ID/exec"; // troque pelo seu Apps Script
 
-// Login
+// ===== LOGIN =====
 async function login() {
   let email = document.getElementById("email").value;
   let senha = document.getElementById("senha").value;
@@ -19,17 +19,13 @@ async function login() {
   }
 }
 
-// Cadastro via link de WhatsApp (grupo)
+// ===== CADASTRO (via grupo WhatsApp) =====
 function cadastrarPrompt() {
-  // Link do grupo que você passou
   let url = "https://chat.whatsapp.com/JKC9c71I98x7jbfoQBPQEX?mode=ems_copy_c";
-
-  // Redireciona para o grupo do WhatsApp
   window.open(url, "_blank");
 }
 
-
-// Painel
+// ===== PAINEL =====
 if (window.location.pathname.includes("painel.html")) {
   let afiliado = JSON.parse(localStorage.getItem("afiliado"));
   if (!afiliado) {
@@ -40,30 +36,38 @@ if (window.location.pathname.includes("painel.html")) {
   document.getElementById("email").innerText = afiliado.email;
   document.getElementById("source").innerText = afiliado.source_id;
 
-  // carregar pedidos reais (API Magazord)
   carregarPedidos(afiliado.source_id);
+  carregarSaldo(afiliado.source_id);
+  carregarGraficos(afiliado.source_id);
 }
 
-// Gerar link UTM
-function gerarLink() {
+// ===== GERAR LINK UTM =====
+async function gerarLink() {
   let url = document.getElementById("urlProduto").value;
   let afiliado = JSON.parse(localStorage.getItem("afiliado"));
-  let link = url + "?utm_source=" + afiliado.source_id;
-  document.getElementById("linkAfiliado").innerText = link;
+
+  let res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({action: "gerarLink", url, source_id: afiliado.source_id})
+  });
+  let data = await res.json();
+
+  document.getElementById("linkAfiliado").innerText = data.link;
 }
 
-// Buscar pedidos Magazord
+// ===== BUSCAR PEDIDOS =====
 async function carregarPedidos(source_id) {
-  let res = await fetch("https://urlmagazord.com.br/api/v2/site/pedido", {
-    headers: { "Authorization": "Bearer SEU_TOKEN_MAGAZORD" }
+  let res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({action: "pedidos", source_id})
   });
   let pedidos = await res.json();
 
-  let meusPedidos = pedidos.filter(p => p.utm_source === source_id);
-  document.getElementById("pedidos").innerText = meusPedidos.length;
+  document.getElementById("pedidos").innerText = pedidos.length;
 
   let tabela = document.getElementById("tabelaPedidos");
-  meusPedidos.forEach(p => {
+  tabela.innerHTML = "";
+  pedidos.forEach(p => {
     tabela.innerHTML += `<tr>
       <td class="border p-2">${p.codigoPedido}</td>
       <td class="border p-2">R$ ${p.valorTotal.toFixed(2)}</td>
@@ -72,3 +76,25 @@ async function carregarPedidos(source_id) {
   });
 }
 
+// ===== SALDO (total vendido) =====
+async function carregarSaldo(source_id) {
+  let res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({action: "saldo", source_id})
+  });
+  let data = await res.json();
+
+  document.getElementById("saldo").innerText = "R$ " + data.total_vendido.toFixed(2);
+}
+
+// ===== GRÁFICOS (exemplo: evolução vendas) =====
+async function carregarGraficos(source_id) {
+  let res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({action: "graficos", source_id})
+  });
+  let dados = await res.json();
+
+  console.log("Dados para gráficos:", dados);
+  // aqui você pode usar Chart.js ou Google Charts para exibir no painel
+}
