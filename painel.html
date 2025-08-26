@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Afiliado</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-6">Painel do Afiliado</h1>
+
+    <!-- Dados do Afiliado -->
+    <div class="grid grid-cols-3 gap-6">
+      <div class="bg-white shadow rounded p-4">
+        <h2 class="text-lg font-semibold">Dados</h2>
+        <p><b>Nome:</b> <span id="nome"></span></p>
+        <p><b>Email:</b> <span id="email"></span></p>
+        <p><b>Source ID:</b> <span id="source"></span></p>
+      </div>
+
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Saldo</h2>
+        <p class="text-2xl font-bold text-green-600" id="saldo">R$ 0,00</p>
+      </div>
+
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Pedidos</h2>
+        <p class="text-2xl font-bold text-blue-600" id="pedidos">0</p>
+      </div>
+    </div>
+
+    <!-- Gerador de link -->
+    <div class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-2">Gerar Link de Afiliado</h2>
+      <input type="text" id="urlProduto" placeholder="Cole a URL do produto" 
+        class="w-full border p-2 rounded">
+      <button onclick="gerarLink()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+        Gerar
+      </button>
+      <p class="mt-2"><b>Link:</b> <span id="linkAfiliado"></span></p>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-2">Histórico de Pedidos</h2>
+      <table class="w-full border">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2 border">Pedido</th>
+            <th class="p-2 border">Valor</th>
+            <th class="p-2 border">Data</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaPedidos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Afiliados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white shadow-lg rounded p-6 w-96">
+    <h1 class="text-2xl font-bold text-center mb-4">Login Afiliados</h1>
+
+    <input id="email" type="email" placeholder="Email"
+      class="w-full border rounded p-2 mb-3">
+    <input id="senha" type="password" placeholder="Senha"
+      class="w-full border rounded p-2 mb-3">
+
+    <button onclick="login()" class="bg-blue-600 text-white w-full p-2 rounded">
+      Entrar
+    </button>
+
+    <p class="text-center mt-4 text-sm">Não tem conta?
+      <a href="#" onclick="cadastrarPrompt()" class="text-blue-500">Cadastrar</a>
+    </p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
