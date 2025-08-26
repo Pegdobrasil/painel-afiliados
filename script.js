@@ -19,22 +19,15 @@ async function login() {
   }
 }
 
-// Cadastro rápido
-async function cadastrarPrompt() {
-  let nome = prompt("Digite seu nome:");
-  let email = prompt("Digite seu email:");
-  let senha = prompt("Crie uma senha:");
-  let source_id = email.split("@")[0]; // gera um source simples
+// Cadastro via link de WhatsApp (grupo)
+function cadastrarPrompt() {
+  // Link do grupo que você passou
+  let url = "https://chat.whatsapp.com/JKC9c71I98x7jbfoQBPQEX?mode=ems_copy_c";
 
-  let res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({action: "cadastrar", nome, email, senha, source_id})
-  });
-  let data = await res.json();
-  if (data.success) {
-    alert("Cadastro realizado! Faça login.");
-  }
+  // Redireciona para o grupo do WhatsApp
+  window.open(url, "_blank");
 }
+
 
 // Painel
 if (window.location.pathname.includes("painel.html")) {
@@ -78,3 +71,4 @@ async function carregarPedidos(source_id) {
     </tr>`;
   });
 }
+
