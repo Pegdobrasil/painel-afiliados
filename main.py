@@ -2,8 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from passlib.context import CryptContext
 import os
 
@@ -26,13 +25,17 @@ app.add_middleware(
 # ======================================
 # BANCO DE DADOS (SQLite)
 # ======================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Corrigido para o Railway – cria o banco dentro do diretório correto
+BASE_DIR = os.getcwd()
 DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
 
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+engine = create_engine(
+    f"sqlite:///{DB_PATH}",
+    connect_args={"check_same_thread": False}
+)
 
 Base = declarative_base()
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # ======================================
@@ -40,7 +43,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ======================================
 class Usuario(Base):
     __tablename__ = "usuarios"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     tipo_pessoa = Column(String)
     cpf_cnpj = Column(String, unique=True)
@@ -90,7 +93,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def root():
     return {"status": "online", "message": "Painel Afiliados API funcionando!"}
 
-
 # ======================================
 # ROTA CADASTRO
 # ======================================
@@ -98,12 +100,10 @@ def root():
 def register_user(data: UsuarioCreate):
     db = SessionLocal()
 
-    # email único
-    existing = db.query(Usuario).filter(Usuario.email == data.email).first()
-    if existing:
+    if db.query(Usuario).filter(Usuario.email == data.email).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
-    new_user = Usuario(
+    user = Usuario(
         tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=data.cpf_cnpj,
         nome=data.nome,
@@ -118,11 +118,10 @@ def register_user(data: UsuarioCreate):
         senha_hash=pwd_context.hash(data.senha),
     )
 
-    db.add(new_user)
+    db.add(user)
     db.commit()
 
     return {"status": "success", "message": "Cadastro realizado com sucesso!"}
-
 
 # ======================================
 # ROTA LOGIN
