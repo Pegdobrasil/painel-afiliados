@@ -1,159 +1,141 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Integer, String, create_engine
+from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
-from jose import jwt
-from datetime import datetime, timedelta
+import os
 
-# ==== CONFIG GERAL ====
-DATABASE_URL = "sqlite:///./afiliados.db"
-SECRET_KEY = "PEGDOBRASIL@8102ECOMMERCE"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 dia
+# ======================================
+# APP FASTAPI
+# ======================================
+app = FastAPI()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-Base = declarative_base()
-
-app = FastAPI(title="API Afiliados")
-
-# CORS: libera seu painel em GitHub Pages
-origins = [
-    "https://pegdobrasil.github.io",  # ajuste para sua URL real
-    "http://localhost:8000",
-    "*",  # enquanto desenvolve; depois deixar mais restrito
-]
+# ======================================
+# CORS
+# ======================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==== MODELO BANCO ====
+# ======================================
+# BANCO DE DADOS (SQLite)
+# ======================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
+
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
+Base = declarative_base()
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# ======================================
+# MODELO DO BANCO
+# ======================================
 class Usuario(Base):
     __tablename__ = "usuarios"
-
+    
     id = Column(Integer, primary_key=True, index=True)
-    tipo_pessoa = Column(String, nullable=False)
-    cpf_cnpj = Column(String, unique=True, index=True, nullable=False)
-    nome = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    senha_hash = Column(String, nullable=False)
-    telefone = Column(String, nullable=True)
-    cep = Column(String, nullable=False)
-    logradouro = Column(String, nullable=False)
-    numero = Column(String, nullable=False)
-    complemento = Column(String, nullable=True)
-    bairro = Column(String, nullable=False)
-    cidade = Column(String, nullable=False)
-    uf = Column(String, nullable=False)
+    tipo_pessoa = Column(String)
+    cpf_cnpj = Column(String, unique=True)
+    nome = Column(String)
+    email = Column(String, unique=True)
+    telefone = Column(String)
+    cep = Column(String)
+    endereco = Column(String)
+    numero = Column(String)
+    bairro = Column(String)
+    cidade = Column(String)
+    estado = Column(String)
+    senha_hash = Column(String)
 
 
 Base.metadata.create_all(bind=engine)
 
-# ==== SCHEMAS Pydantic ====
+# ======================================
+# MODELO DE REQUISIÇÃO
+# ======================================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
     cpf_cnpj: str
     nome: str
-    email: EmailStr
-    senha: str
-    telefone: str | None = None
+    email: str
+    telefone: str
     cep: str
-    logradouro: str
+    endereco: str
     numero: str
-    complemento: str | None = None
     bairro: str
     cidade: str
-    uf: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-class LoginData(BaseModel):
-    email: EmailStr
+    estado: str
     senha: str
 
 
-# ==== DEPENDÊNCIA DE SESSÃO DB ====
-def get_db():
+class LoginRequest(BaseModel):
+    email: str
+    senha: str
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ======================================
+# ROTA DE TESTE
+# ======================================
+@app.get("/")
+def root():
+    return {"status": "online", "message": "Painel Afiliados API funcionando!"}
+
+
+# ======================================
+# ROTA CADASTRO
+# ======================================
+@app.post("/api/auth/register")
+def register_user(data: UsuarioCreate):
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
+    # email único
+    existing = db.query(Usuario).filter(Usuario.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
-# ==== FUNÇÕES AUXILIARES ====
-def hash_senha(senha: str) -> str:
-    return pwd_context.hash(senha)
-
-
-def verificar_senha(senha: str, hash_armazenado: str) -> bool:
-    return pwd_context.verify(senha, hash_armazenado)
-
-
-def criar_token(dados: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
-    to_encode = dados.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-# ==== ROTAS ====
-
-@app.post("/api/auth/register", status_code=201)
-def register(user: UsuarioCreate, db: Session = Depends(get_db)):
-    # valida CPF/CNPJ básico
-    digits = "".join(filter(str.isdigit, user.cpf_cnpj))
-    if len(digits) not in (11, 14):
-        raise HTTPException(status_code=400, detail="CPF/CNPJ inválido.")
-
-    # checa duplicidade
-    if db.query(Usuario).filter(Usuario.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email já cadastrado.")
-    if db.query(Usuario).filter(Usuario.cpf_cnpj == digits).first():
-        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado.")
-
-    novo = Usuario(
-        tipo_pessoa=user.tipo_pessoa,
-        cpf_cnpj=digits,
-        nome=user.nome,
-        email=user.email,
-        senha_hash=hash_senha(user.senha),
-        telefone=user.telefone,
-        cep=user.cep,
-        logradouro=user.logradouro,
-        numero=user.numero,
-        complemento=user.complemento,
-        bairro=user.bairro,
-        cidade=user.cidade,
-        uf=user.uf.upper(),
+    new_user = Usuario(
+        tipo_pessoa=data.tipo_pessoa,
+        cpf_cnpj=data.cpf_cnpj,
+        nome=data.nome,
+        email=data.email,
+        telefone=data.telefone,
+        cep=data.cep,
+        endereco=data.endereco,
+        numero=data.numero,
+        bairro=data.bairro,
+        cidade=data.cidade,
+        estado=data.estado,
+        senha_hash=pwd_context.hash(data.senha),
     )
 
-    db.add(novo)
+    db.add(new_user)
     db.commit()
-    db.refresh(novo)
 
-    return {"id": novo.id, "email": novo.email}
+    return {"status": "success", "message": "Cadastro realizado com sucesso!"}
 
 
-@app.post("/api/auth/login", response_model=Token)
-def login(data: LoginData, db: Session = Depends(get_db)):
+# ======================================
+# ROTA LOGIN
+# ======================================
+@app.post("/api/auth/login")
+def login_user(data: LoginRequest):
+    db = SessionLocal()
+
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
-    if not user or not verificar_senha(data.senha, user.senha_hash):
-        raise HTTPException(status_code=401, detail="Credenciais inválidas.")
+    if not user:
+        raise HTTPException(status_code=400, detail="E-mail não encontrado")
 
-    token = criar_token({"sub": str(user.id), "email": user.email})
-    return Token(access_token=token)
+    if not pwd_context.verify(data.senha, user.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha incorreta")
 
+    return {"status": "success", "message": "Login autorizado"}
