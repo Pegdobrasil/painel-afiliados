@@ -1,138 +1,39 @@
 // ===============================
-// CONFIG: URL base da sua API backend
-// (depois vamos subir isso em Render / Railway / etc.)
-const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
+// CONFIG API BACKEND
 // ===============================
 
-const SESSION_KEY = "painel_afiliado_token";
+// URL base da sua API no Railway
+const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
 
-// -------------------------------
-// Helper: pegar valor de input
-// -------------------------------
+// ===============================
+// HELPERS
+// ===============================
+
+// Pega valor de um input por id
 function v(id) {
-  return document.getElementById(id).value.trim();
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : "";
 }
 
-// -------------------------------
-// CADASTRO
-// -------------------------------
-async function registrar() {
-  const payload = {
-    tipo_pessoa: v("tipo_pessoa"),
-    cpf_cnpj: v("cpf_cnpj").replace(/\D/g, ""),
-    nome: v("nome"),
-    email: v("email"),
-    senha: v("senha"),
-    telefone: v("telefone"),
-    cep: v("cep").replace(/\D/g, ""),
-    logradouro: v("logradouro"),
-    numero: v("numero"),
-    complemento: v("complemento"),
-    bairro: v("bairro"),
-    cidade: v("cidade"),
-    uf: v("uf").toUpperCase()
-  };
-
-  // validações básicas
-  if (!payload.nome || !payload.email || !payload.senha) {
-    alert("Preencha nome, email e senha.");
-    return;
-  }
-
-  if (payload.cpf_cnpj.length !== 11 && payload.cpf_cnpj.length !== 14) {
-    alert("CPF/CNPJ deve ter 11 ou 14 dígitos.");
-    return;
-  }
-
-  if (payload.cep.length !== 8) {
-    alert("CEP deve ter 8 dígitos.");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/auth/register`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert(err.detail || "Erro ao cadastrar.");
-      return;
-    }
-
-    alert("Cadastro realizado com sucesso! Faça login para entrar.");
-    window.location.href = "index.html";
-
-  } catch (e) {
-    console.error(e);
-    alert("Falha na comunicação com o servidor.");
-  }
+// Mostra alerta simples (pode trocar por toast depois)
+function notify(msg) {
+  alert(msg);
 }
 
-// -------------------------------
-// LOGIN
-// -------------------------------
-async function login() {
-  const email = v("email");
-  const senha = v("senha");
-
-  if (!email || !senha) {
-    alert("Informe email e senha.");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({email, senha})
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.detail || "Login inválido.");
-      return;
-    }
-
-    // salva token JWT
-    localStorage.setItem(SESSION_KEY, data.access_token);
-    window.location.href = "painel.html";
-
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao conectar com o servidor.");
-  }
+// Remove tudo que não for número
+function onlyDigits(str) {
+  return (str || "").replace(/\D/g, "");
 }
 
-// -------------------------------
-// LOGOUT
-// -------------------------------
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  window.location.href = "index.html";
-}
+// ===============================
+// BUSCA CEP (ViaCEP)
+// ===============================
 
-// -------------------------------
-// PROTEGE PÁGINAS INTERNAS
-// (chamar em painel.html, settings.html etc.)
-// -------------------------------
-function requerLogin() {
-  const token = localStorage.getItem(SESSION_KEY);
-  if (!token) {
-    window.location.href = "index.html";
-  }
-  return token;
-}
-
-// -------------------------------
-// CEP -> ViaCEP
-// -------------------------------
 async function buscarCep() {
-  let cep = v("cep").replace(/\D/g, "");
+  const cep = onlyDigits(v("cep"));
+
   if (cep.length !== 8) {
+    // CEP inválido ou incompleto
     return;
   }
 
@@ -141,17 +42,146 @@ async function buscarCep() {
     const data = await res.json();
 
     if (data.erro) {
-      alert("CEP não encontrado.");
+      notify("CEP não encontrado. Verifique os números informados.");
       return;
     }
 
-    document.getElementById("logradouro").value = data.logradouro || "";
-    document.getElementById("bairro").value = data.bairro || "";
-    document.getElementById("cidade").value = data.localidade || "";
-    document.getElementById("uf").value = data.uf || "";
+    // Preenche campos
+    const logradouro = document.getElementById("logradouro");
+    const bairro = document.getElementById("bairro");
+    const cidade = document.getElementById("cidade");
+    const uf = document.getElementById("uf");
 
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao consultar CEP.");
+    if (logradouro) logradouro.value = data.logradouro || "";
+    if (bairro) bairro.value = data.bairro || "";
+    if (cidade) cidade.value = data.localidade || "";
+    if (uf) uf.value = (data.uf || "").toUpperCase();
+  } catch (err) {
+    console.error("Erro ao buscar CEP:", err);
+    notify("Não foi possível consultar o CEP no momento.");
   }
+}
+
+// ===============================
+// CADASTRO DE USUÁRIO
+// ===============================
+
+async function registrar() {
+  // Coleta de dados do formulário
+  const payload = {
+    tipo_pessoa: v("tipo_pessoa"),
+    cpf_cnpj: onlyDigits(v("cpf_cnpj")),
+    nome: v("nome"),
+    email: v("email"),
+    telefone: v("telefone"),
+    cep: onlyDigits(v("cep")),
+    // Endereço = logradouro + complemento (quando houver)
+    endereco: (() => {
+      const logradouro = v("logradouro");
+      const complemento = v("complemento");
+      return complemento ? `${logradouro} - ${complemento}` : logradouro;
+    })(),
+    numero: v("numero"),
+    bairro: v("bairro"),
+    cidade: v("cidade"),
+    estado: v("uf"),
+    senha: v("senha"),
+  };
+
+  // Validação básica
+  if (
+    !payload.tipo_pessoa ||
+    !payload.cpf_cnpj ||
+    !payload.nome ||
+    !payload.email ||
+    !payload.senha ||
+    !payload.cep ||
+    !payload.endereco ||
+    !payload.numero ||
+    !payload.bairro ||
+    !payload.cidade ||
+    !payload.estado
+  ) {
+    notify("Preencha todos os campos obrigatórios antes de salvar.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      const msg = errorData?.detail || "Erro ao salvar o cadastro.";
+      notify(msg);
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Cadastro OK:", data);
+
+    notify("Cadastro realizado com sucesso!");
+
+    // Depois do cadastro, envia para o login
+    window.location.href = "index.html";
+  } catch (err) {
+    console.error("Erro no cadastro:", err);
+    notify("Não foi possível concluir o cadastro. Tente novamente em instantes.");
+  }
+}
+
+// ===============================
+// LOGIN (caso queira usar o mesmo arquivo no index.html)
+// ===============================
+
+async function login() {
+  const email = v("email");
+  const senha = v("senha");
+
+  if (!email || !senha) {
+    notify("Informe email e senha para entrar.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, senha }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      const msg = errorData?.detail || "Não foi possível fazer login.";
+      notify(msg);
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Login OK:", data);
+
+    // Aqui futuramente podemos guardar token / dados do usuário
+    // Exemplo simples:
+    localStorage.setItem(
+      "painel_afiliado_session",
+      JSON.stringify({ email, logged_at: new Date().toISOString() })
+    );
+
+    notify("Login realizado com sucesso!");
+    window.location.href = "painel.html";
+  } catch (err) {
+    console.error("Erro no login:", err);
+    notify("Erro de conexão ao tentar fazer login.");
+  }
+}
+
+// ===============================
+// UTILIDADE OPCIONAL: ir para tela de cadastro
+// (caso queira usar no link "Cadastrar" do index.html)
+// ===============================
+function cadastrarPrompt() {
+  window.location.href = "cadastro.html";
 }
