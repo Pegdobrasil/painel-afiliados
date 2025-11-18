@@ -1,7 +1,7 @@
 // ===============================
 // CONFIG: URL base da sua API backend
 // (depois vamos subir isso em Render / Railway / etc.)
-const API_BASE = "https://SEU_BACKEND_URL/api";
+const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
 // ===============================
 
 const SESSION_KEY = "painel_afiliado_token";
