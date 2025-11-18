@@ -138,3 +138,8 @@ def login_user(data: LoginRequest):
         raise HTTPException(status_code=400, detail="Senha incorreta")
 
     return {"status": "success", "message": "Login autorizado"}
+
+@app.get("/")
+def root():
+    return {"status": "online", "message": "Painel Afiliados Rodando"}
+
