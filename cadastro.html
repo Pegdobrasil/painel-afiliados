@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro – Painel Afiliados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white shadow-xl rounded-lg p-8 w-full max-w-2xl">
+    <h1 class="text-2xl font-bold mb-6 text-center">Cadastro de Afiliado</h1>
+
+    <!-- DADOS BÁSICOS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="text-sm text-gray-600">Tipo de Pessoa</label>
+        <select id="tipo_pessoa" class="w-full border rounded p-2">
+          <option value="PF">Pessoa Física (CPF)</option>
+          <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600">CPF / CNPJ</label>
+        <input id="cpf_cnpj" type="text" class="w-full border rounded p-2"
+               placeholder="Apenas números">
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600">Nome completo / Razão social</label>
+        <input id="nome" type="text" class="w-full border rounded p-2">
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600">Email</label>
+        <input id="email" type="email" class="w-full border rounded p-2">
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600">Senha</label>
+        <input id="senha" type="password" class="w-full border rounded p-2">
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600">Telefone</label>
+        <input id="telefone" type="tel" class="w-full border rounded p-2"
+               placeholder="(xx) xxxxx-xxxx">
+      </div>
+    </div>
+
+    <!-- ENDEREÇO -->
+    <h2 class="text-lg font-semibold mt-4 mb-2">Endereço</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="text-sm text-gray-600">CEP</label>
+        <input id="cep" type="text" class="w-full border rounded p-2"
+               placeholder="Somente números"
+               onblur="buscarCep()">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="text-sm text-gray-600">Logradouro</label>
+        <input id="logradouro" type="text" class="w-full border rounded p-2">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      <div class="md:col-span-2">
+        <label class="text-sm text-gray-600">Bairro</label>
+        <input id="bairro" type="text" class="w-full border rounded p-2">
+      </div>
+      <div>
+        <label class="text-sm text-gray-600">Cidade</label>
+        <input id="cidade" type="text" class="w-full border rounded p-2">
+      </div>
+      <div>
+        <label class="text-sm text-gray-600">UF</label>
+        <input id="uf" type="text" maxlength="2"
+               class="w-full border rounded p-2 uppercase">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="text-sm text-gray-600">Número</label>
+        <input id="numero" type="text" class="w-full border rounded p-2">
+      </div>
+      <div class="md:col-span-2">
+        <label class="text-sm text-gray-600">Complemento</label>
+        <input id="complemento" type="text" class="w-full border rounded p-2">
+      </div>
+    </div>
+
+    <!-- AÇÕES -->
+    <div class="flex justify-between items-center mt-6">
+      <a href="index.html" class="text-sm text-gray-500 hover:underline">
+        Já tenho cadastro
+      </a>
+
+      <button onclick="registrar()"
+        class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
+        Salvar cadastro
+      </button>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>
