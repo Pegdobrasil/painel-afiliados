@@ -31,7 +31,7 @@ DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False},
 )
 
 Base = declarative_base()
@@ -47,7 +47,7 @@ class Usuario(Base):
     tipo_pessoa = Column(String)
     cpf_cnpj = Column(String, unique=True)
     nome = Column(String)
-    email = Column(String, unique=True)
+    email = Column(String, unique=True, index=True)
     telefone = Column(String)
     cep = Column(String)
     endereco = Column(String)
@@ -61,7 +61,7 @@ class Usuario(Base):
 Base.metadata.create_all(bind=engine)
 
 # ======================================
-# MODELOS DE REQUISIÇÃO
+# MODELOS Pydantic
 # ======================================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
@@ -82,15 +82,18 @@ class LoginRequest(BaseModel):
     email: str
     senha: str
 
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ======================================
+# CONTEXTO DE SENHA (sem bcrypt nativo)
+# ======================================
+# pbkdf2_sha256 é seguro e não depende da lib 'bcrypt' que está dando erro no Railway
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # ======================================
-# ROTA DE TESTE
+# ROTA ROOT
 # ======================================
 @app.get("/")
 def root():
-    return {"status": "online", "message": "Painel Afiliados API funcionando!"}
+    return {"status": "online", "message": "Painel Afiliados API funcionando"}
 
 # ======================================
 # ROTA CADASTRO
@@ -104,33 +107,30 @@ def register_user(data: UsuarioCreate):
         db.close()
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
-    # ==========================
-    # Validação e ajuste da senha
-    # ==========================
-    raw_password = (data.senha or "").strip()
+    # Verifica se CPF/CNPJ já existe
+    if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
+        db.close()
+        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
 
-    if len(raw_password) < 6:
+    # Validação mínima de senha
+    senha = (data.senha or "").strip()
+    if len(senha) < 6:
         db.close()
         raise HTTPException(
             status_code=400,
-            detail="A senha deve ter pelo menos 6 caracteres."
+            detail="A senha deve ter pelo menos 6 caracteres.",
         )
 
-    # bcrypt aceita no máximo 72 BYTES, não caracteres
-    senha_bytes = raw_password.encode("utf-8")
-    if len(senha_bytes) > 72:
-        # corta para 72 bytes e converte de volta ignorando pedaços quebrados
-        senha_bytes = senha_bytes[:72]
-        raw_password = senha_bytes.decode("utf-8", errors="ignore")
-
+    # Gera hash da senha
     try:
-        senha_hash = pwd_context.hash(raw_password)
-    except ValueError as exc:
+        senha_hash = pwd_context.hash(senha)
+    except Exception as exc:
         db.close()
-        # Se ainda assim der erro, devolve 400 explicando
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao criptografar a senha: {exc}",
+        )
 
-    # Cria usuário
     user = Usuario(
         tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=data.cpf_cnpj,
@@ -154,11 +154,11 @@ def register_user(data: UsuarioCreate):
         db.close()
         raise HTTPException(
             status_code=500,
-            detail="Erro ao salvar o cadastro no banco de dados."
+            detail="Erro ao salvar o cadastro no banco de dados.",
         )
 
     db.close()
-    return {"status": "success", "message": "Cadastro realizado com sucesso!"}
+    return {"status": "success", "message": "Cadastro realizado com sucesso"}
 
 # ======================================
 # ROTA LOGIN
