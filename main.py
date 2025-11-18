@@ -26,7 +26,6 @@ app.add_middleware(
 # BANCO DE DADOS (SQLite)
 # ======================================
 
-# Corrigido para o Railway – cria o banco dentro do diretório correto
 BASE_DIR = os.getcwd()
 DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
 
@@ -62,7 +61,7 @@ class Usuario(Base):
 Base.metadata.create_all(bind=engine)
 
 # ======================================
-# MODELO DE REQUISIÇÃO
+# MODELOS DE REQUISIÇÃO
 # ======================================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
@@ -100,9 +99,38 @@ def root():
 def register_user(data: UsuarioCreate):
     db = SessionLocal()
 
+    # Verifica se email já existe
     if db.query(Usuario).filter(Usuario.email == data.email).first():
+        db.close()
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
+    # ==========================
+    # Validação e ajuste da senha
+    # ==========================
+    raw_password = (data.senha or "").strip()
+
+    if len(raw_password) < 6:
+        db.close()
+        raise HTTPException(
+            status_code=400,
+            detail="A senha deve ter pelo menos 6 caracteres."
+        )
+
+    # bcrypt aceita no máximo 72 BYTES, não caracteres
+    senha_bytes = raw_password.encode("utf-8")
+    if len(senha_bytes) > 72:
+        # corta para 72 bytes e converte de volta ignorando pedaços quebrados
+        senha_bytes = senha_bytes[:72]
+        raw_password = senha_bytes.decode("utf-8", errors="ignore")
+
+    try:
+        senha_hash = pwd_context.hash(raw_password)
+    except ValueError as exc:
+        db.close()
+        # Se ainda assim der erro, devolve 400 explicando
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Cria usuário
     user = Usuario(
         tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=data.cpf_cnpj,
@@ -115,12 +143,21 @@ def register_user(data: UsuarioCreate):
         bairro=data.bairro,
         cidade=data.cidade,
         estado=data.estado,
-        senha_hash=pwd_context.hash(data.senha),
+        senha_hash=senha_hash,
     )
 
-    db.add(user)
-    db.commit()
+    try:
+        db.add(user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        db.close()
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao salvar o cadastro no banco de dados."
+        )
 
+    db.close()
     return {"status": "success", "message": "Cadastro realizado com sucesso!"}
 
 # ======================================
@@ -132,14 +169,12 @@ def login_user(data: LoginRequest):
 
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
+        db.close()
         raise HTTPException(status_code=400, detail="E-mail não encontrado")
 
     if not pwd_context.verify(data.senha, user.senha_hash):
+        db.close()
         raise HTTPException(status_code=400, detail="Senha incorreta")
 
+    db.close()
     return {"status": "success", "message": "Login autorizado"}
-
-@app.get("/")
-def root():
-    return {"status": "online", "message": "Painel Afiliados Rodando"}
-
