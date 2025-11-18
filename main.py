@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 # ==== CONFIG GERAL ====
 DATABASE_URL = "sqlite:///./afiliados.db"
-SECRET_KEY = "TROQUE_ESSA_CHAVE_PARA_UMA_BEM_GRANDE"
+SECRET_KEY = "PEGDOBRASIL@8102ECOMMERCE"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 dia
 
@@ -156,3 +156,4 @@ def login(data: LoginData, db: Session = Depends(get_db)):
 
     token = criar_token({"sub": str(user.id), "email": user.email})
     return Token(access_token=token)
+
