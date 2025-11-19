@@ -26,7 +26,6 @@ app.add_middleware(
 # BANCO DE DADOS (SQLite)
 # ======================================
 
-# Corrigido para o Railway – cria o banco dentro do diretório correto
 BASE_DIR = os.getcwd()
 DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
 
@@ -58,11 +57,10 @@ class Usuario(Base):
     estado = Column(String)
     senha_hash = Column(String)
 
-
 Base.metadata.create_all(bind=engine)
 
 # ======================================
-# MODELO DE REQUISIÇÃO
+# MODELOS
 # ======================================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
@@ -78,20 +76,24 @@ class UsuarioCreate(BaseModel):
     estado: str
     senha: str
 
-
 class LoginRequest(BaseModel):
     email: str
     senha: str
 
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ======================================
+# HASH DE SENHA – FIX DO BCRYPT BUGANDO NO RAILWAY
+# ======================================
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256"],
+    deprecated="auto"
+)
 
 # ======================================
-# ROTA DE TESTE
+# ROTA ROOT
 # ======================================
 @app.get("/")
 def root():
-    return {"status": "online", "message": "Painel Afiliados API funcionando!"}
+    return {"status": "online", "message": "Painel Afiliados funcionando!"}
 
 # ======================================
 # ROTA CADASTRO
@@ -100,8 +102,21 @@ def root():
 def register_user(data: UsuarioCreate):
     db = SessionLocal()
 
+    # Email duplicado
     if db.query(Usuario).filter(Usuario.email == data.email).first():
+        db.close()
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
+
+    # CPF/CNPJ duplicado
+    if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
+        db.close()
+        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
+
+    # Hash senha
+    try:
+        senha_hash = pwd_context.hash(data.senha)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar hash: {exc}")
 
     user = Usuario(
         tipo_pessoa=data.tipo_pessoa,
@@ -115,11 +130,12 @@ def register_user(data: UsuarioCreate):
         bairro=data.bairro,
         cidade=data.cidade,
         estado=data.estado,
-        senha_hash=pwd_context.hash(data.senha),
+        senha_hash=senha_hash,
     )
 
     db.add(user)
     db.commit()
+    db.close()
 
     return {"status": "success", "message": "Cadastro realizado com sucesso!"}
 
@@ -132,12 +148,9 @@ def login_user(data: LoginRequest):
 
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
+        db.close()
         raise HTTPException(status_code=400, detail="E-mail não encontrado")
 
     if not pwd_context.verify(data.senha, user.senha_hash):
-        raise HTTPException(status_code=400, detail="Senha incorreta")
-
-    return {"status": "success", "message": "Login autorizado"}
-@app.get("/")
-def root():
-    return {"status": "online", "message": "Painel Afiliados Rodando"}
+        db.close()
+        raise HTT
