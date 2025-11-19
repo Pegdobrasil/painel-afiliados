@@ -5,12 +5,31 @@
   <title>Painel do Afiliado</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.js"></script>
-<script src="auth.js"></script>
 
 <body class="bg-gray-100">
   <div class="max-w-6xl mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-6">Painel do Afiliado</h1>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Painel do Afiliado</h1>
+
+      <div class="flex gap-3">
+        <button onclick="abrirConta()" 
+          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
+          Minha Conta
+        </button>
+
+        <button onclick="recuperarSenha()"
+          class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+          Recuperar Senha
+        </button>
+
+        <button onclick="sair()"
+          class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Sair
+        </button>
+      </div>
+    </div>
 
     <!-- Dados do Afiliado -->
     <div class="grid grid-cols-3 gap-6">
@@ -18,7 +37,7 @@
         <h2 class="text-lg font-semibold">Dados</h2>
         <p><b>Nome:</b> <span id="nome"></span></p>
         <p><b>Email:</b> <span id="email"></span></p>
-        <p><b>Source ID:</b> <span id="source"></span></p>
+        <p><b>ID Interno:</b> <span id="id"></span></p>
       </div>
 
       <div class="bg-white shadow rounded p-4 text-center">
@@ -32,18 +51,19 @@
       </div>
     </div>
 
-    <!-- Gerador de link -->
+    <!-- Gerador de Link -->
     <div class="bg-white shadow rounded p-4 mt-6">
       <h2 class="text-lg font-semibold mb-2">Gerar Link de Afiliado</h2>
       <input type="text" id="urlProduto" placeholder="Cole a URL do produto" 
         class="w-full border p-2 rounded">
-      <button onclick="gerarLink()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+      <button onclick="gerarLink()" 
+        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
         Gerar
       </button>
       <p class="mt-2"><b>Link:</b> <span id="linkAfiliado"></span></p>
     </div>
 
-    <!-- Lista de pedidos -->
+    <!-- Tabela de Pedidos -->
     <div class="bg-white shadow rounded p-4 mt-6">
       <h2 class="text-lg font-semibold mb-2">Histórico de Pedidos</h2>
       <table class="w-full border">
@@ -57,7 +77,9 @@
         <tbody id="tabelaPedidos"></tbody>
       </table>
     </div>
+
   </div>
+
+  <script src="painel.js"></script>
 </body>
 </html>
-
