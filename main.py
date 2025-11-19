@@ -26,12 +26,13 @@ app.add_middleware(
 # BANCO DE DADOS (SQLite)
 # ======================================
 
+# Corrigido para o Railway – cria o banco dentro do diretório correto
 BASE_DIR = os.getcwd()
 DB_PATH = os.path.join(BASE_DIR, "usuarios.db")
 
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False}
 )
 
 Base = declarative_base()
@@ -47,7 +48,7 @@ class Usuario(Base):
     tipo_pessoa = Column(String)
     cpf_cnpj = Column(String, unique=True)
     nome = Column(String)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, unique=True)
     telefone = Column(String)
     cep = Column(String)
     endereco = Column(String)
@@ -61,7 +62,7 @@ class Usuario(Base):
 Base.metadata.create_all(bind=engine)
 
 # ======================================
-# MODELOS Pydantic
+# MODELO DE REQUISIÇÃO
 # ======================================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
@@ -82,18 +83,15 @@ class LoginRequest(BaseModel):
     email: str
     senha: str
 
-# ======================================
-# CONTEXTO DE SENHA (sem bcrypt bugado)
-# ======================================
-# pbkdf2_sha256 é seguro e não depende da lib 'bcrypt' que estava dando erro
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ======================================
-# ROTA ROOT
+# ROTA DE TESTE
 # ======================================
 @app.get("/")
 def root():
-    return {"status": "online", "message": "Painel Afiliados API funcionando"}
+    return {"status": "online", "message": "Painel Afiliados API funcionando!"}
 
 # ======================================
 # ROTA CADASTRO
@@ -102,34 +100,8 @@ def root():
 def register_user(data: UsuarioCreate):
     db = SessionLocal()
 
-    # Verifica se email já existe
     if db.query(Usuario).filter(Usuario.email == data.email).first():
-        db.close()
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
-
-    # Verifica se CPF/CNPJ já existe
-    if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
-        db.close()
-        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
-
-    # Validação mínima de senha
-    senha = (data.senha or "").strip()
-    if len(senha) < 6:
-        db.close()
-        raise HTTPException(
-            status_code=400,
-            detail="A senha deve ter pelo menos 6 caracteres.",
-        )
-
-    # Gera hash da senha
-    try:
-        senha_hash = pwd_context.hash(senha)
-    except Exception as exc:
-        db.close()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao criptografar a senha: {exc}",
-        )
 
     user = Usuario(
         tipo_pessoa=data.tipo_pessoa,
@@ -143,22 +115,13 @@ def register_user(data: UsuarioCreate):
         bairro=data.bairro,
         cidade=data.cidade,
         estado=data.estado,
-        senha_hash=senha_hash,
+        senha_hash=pwd_context.hash(data.senha),
     )
 
-    try:
-        db.add(user)
-        db.commit()
-    except Exception:
-        db.rollback()
-        db.close()
-        raise HTTPException(
-            status_code=500,
-            detail="Erro ao salvar o cadastro no banco de dados.",
-        )
+    db.add(user)
+    db.commit()
 
-    db.close()
-    return {"status": "success", "message": "Cadastro realizado com sucesso"}
+    return {"status": "success", "message": "Cadastro realizado com sucesso!"}
 
 # ======================================
 # ROTA LOGIN
@@ -169,12 +132,12 @@ def login_user(data: LoginRequest):
 
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
-        db.close()
         raise HTTPException(status_code=400, detail="E-mail não encontrado")
 
     if not pwd_context.verify(data.senha, user.senha_hash):
-        db.close()
         raise HTTPException(status_code=400, detail="Senha incorreta")
 
-    db.close()
     return {"status": "success", "message": "Login autorizado"}
+@app.get("/")
+def root():
+    return {"status": "online", "message": "Painel Afiliados Rodando"}
