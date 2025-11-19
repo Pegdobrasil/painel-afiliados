@@ -16,7 +16,8 @@ app.add_middleware(
 )
 
 # Rotas de cadastro/login/usuários ficam no módulo server.auth
-app.include_router(auth_router, prefix="/api")
+# AGORA com prefixo /api/auth  → /api/auth/register, /api/auth/login, etc.
+app.include_router(auth_router, prefix="/api/auth")
 
 
 @app.get("/")
