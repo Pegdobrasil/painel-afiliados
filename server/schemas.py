@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class UsuarioCreate(BaseModel):
@@ -22,6 +22,8 @@ class LoginRequest(BaseModel):
 
 
 class UsuarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     tipo_pessoa: str
     cpf_cnpj: str
@@ -34,9 +36,6 @@ class UsuarioOut(BaseModel):
     bairro: str | None = None
     cidade: str | None = None
     estado: str | None = None
-
-    class Config:
-        orm_mode = True
 
 
 class UsuarioUpdate(BaseModel):
@@ -51,3 +50,13 @@ class UsuarioUpdate(BaseModel):
     bairro: str | None = None
     cidade: str | None = None
     estado: str | None = None
+
+
+class PasswordChange(BaseModel):
+    senha_atual: str
+    senha_nova: str
+
+
+class PasswordReset(BaseModel):
+    email: str
+    nova_senha: str
