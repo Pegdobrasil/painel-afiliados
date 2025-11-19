@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel Admin – Afiliados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Cabeçalho -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Painel do Administrador</h1>
+      <div class="flex gap-3">
+        <button onclick="voltarLogin()"
+          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
+          Ir para login
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Lista de afiliados -->
+      <div class="lg:col-span-2 bg-white shadow rounded p-4">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-semibold">Afiliados cadastrados</h2>
+          <button onclick="carregarAfiliados()"
+            class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+            Atualizar lista
+          </button>
+        </div>
+
+        <div class="mb-3">
+          <input id="filtroBusca" type="text"
+            placeholder="Filtrar por nome, email ou CPF/CNPJ..."
+            class="w-full border rounded p-2 text-sm"
+            oninput="filtrarTabela()" />
+        </div>
+
+        <div class="overflow-auto max-h-[480px] border rounded">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="p-2 border">ID</th>
+                <th class="p-2 border">Nome</th>
+                <th class="p-2 border">Email</th>
+                <th class="p-2 border">CPF/CNPJ</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaAfiliados"></tbody>
+          </table>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-2">
+          Clique em uma linha para carregar os dados no formulário de edição ao lado.
+        </p>
+      </div>
+
+      <!-- Formulário de edição -->
+      <div class="bg-white shadow rounded p-4">
+        <h2 class="text-lg font-semibold mb-4">Editar afiliado</h2>
+
+        <p class="text-sm mb-2">
+          <b>ID selecionado:</b>
+          <span id="form_id" class="text-blue-600">nenhum</span>
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-600">Tipo de Pessoa</label>
+            <select id="form_tipo_pessoa" class="w-full border rounded p-2 text-sm">
+              <option value="PF">Pessoa Física (CPF)</option>
+              <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">CPF / CNPJ</label>
+            <input id="form_cpf_cnpj" type="text"
+              class="w-full border rounded p-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">Nome completo / Razão social</label>
+            <input id="form_nome" type="text"
+              class="w-full border rounded p-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">Email</label>
+            <input id="form_email" type="email"
+              class="w-full border rounded p-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">Telefone</label>
+            <input id="form_telefone" type="tel"
+              class="w-full border rounded p-2 text-sm" />
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label class="text-xs text-gray-600">CEP</label>
+              <input id="form_cep" type="text"
+                class="w-full border rounded p-2 text-sm" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">Número</label>
+              <input id="form_numero" type="text"
+                class="w-full border rounded p-2 text-sm" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">Endereço</label>
+            <input id="form_endereco" type="text"
+              class="w-full border rounded p-2 text-sm" />
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">Bairro</label>
+              <input id="form_bairro" type="text"
+                class="w-full border rounded p-2 text-sm" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-xs text-gray-600">Cidade</label>
+              <input id="form_cidade" type="text"
+                class="w-full border rounded p-2 text-sm" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-gray-600">Estado (UF)</label>
+            <input id="form_estado" maxlength="2"
+              class="w-full border rounded p-2 text-sm uppercase" />
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-5">
+          <button onclick="limparFormulario()"
+            class="text-sm px-4 py-2 rounded border border-gray-400 text-gray-700 hover:bg-gray-100">
+            Limpar
+          </button>
+
+          <button onclick="salvarAfiliado()"
+            class="text-sm px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">
+            Salvar alterações
+          </button>
+        </div>
+
+        <p id="admin_msg" class="text-xs mt-3 text-gray-500"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
