@@ -83,9 +83,9 @@ class LoginRequest(BaseModel):
     senha: str
 
 # ======================================
-# CONTEXTO DE SENHA (sem bcrypt nativo)
+# CONTEXTO DE SENHA (sem bcrypt bugado)
 # ======================================
-# pbkdf2_sha256 é seguro e não depende da lib 'bcrypt' que está dando erro no Railway
+# pbkdf2_sha256 é seguro e não depende da lib 'bcrypt' que estava dando erro
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # ======================================
