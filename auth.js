@@ -2,58 +2,72 @@
 // CONFIG API BACKEND
 // ===============================
 
+// URL base da sua API no Railway
 const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
 
 // ===============================
 // HELPERS
 // ===============================
 
+// Pega valor de um input por id
 function v(id) {
   const el = document.getElementById(id);
   return el ? el.value.trim() : "";
 }
 
+// Mostra alerta simples (pode trocar por toast depois)
 function notify(msg) {
   alert(msg);
 }
 
+// Remove tudo que não for número
 function onlyDigits(str) {
   return (str || "").replace(/\D/g, "");
 }
 
 // ===============================
-// BUSCA CEP VIACEP
+// BUSCA CEP (ViaCEP)
 // ===============================
 
 async function buscarCep() {
   const cep = onlyDigits(v("cep"));
-  if (cep.length !== 8) return;
+
+  if (cep.length !== 8) {
+    // CEP inválido ou incompleto
+    return;
+  }
 
   try {
     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
     const data = await res.json();
 
     if (data.erro) {
-      notify("CEP não encontrado.");
+      notify("CEP não encontrado. Verifique os números informados.");
       return;
     }
 
-    document.getElementById("logradouro").value = data.logradouro || "";
-    document.getElementById("bairro").value = data.bairro || "";
-    document.getElementById("cidade").value = data.localidade || "";
-    document.getElementById("uf").value = (data.uf || "").toUpperCase();
+    // Preenche campos
+    const logradouro = document.getElementById("logradouro");
+    const bairro = document.getElementById("bairro");
+    const cidade = document.getElementById("cidade");
+    const uf = document.getElementById("uf");
 
+    if (logradouro) logradouro.value = data.logradouro || "";
+    if (bairro) bairro.value = data.bairro || "";
+    if (cidade) cidade.value = data.localidade || "";
+    if (uf) uf.value = (data.uf || "").toUpperCase();
   } catch (err) {
-    console.error(err);
-    notify("Não foi possível consultar o CEP.");
+    console.error("Erro ao buscar CEP:", err);
+    notify("Não foi possível consultar o CEP no momento.");
   }
 }
 
 // ===============================
-// CADASTRO
+// CADASTRO DE USUÁRIO
 // ===============================
 
 async function registrar() {
+  // Coleta de dados do formulário
   const payload = {
     tipo_pessoa: v("tipo_pessoa"),
     cpf_cnpj: onlyDigits(v("cpf_cnpj")),
@@ -61,10 +75,11 @@ async function registrar() {
     email: v("email"),
     telefone: v("telefone"),
     cep: onlyDigits(v("cep")),
+    // Endereço = logradouro + complemento (quando houver)
     endereco: (() => {
-      const lg = v("logradouro");
-      const cp = v("complemento");
-      return cp ? `${lg} - ${cp}` : lg;
+      const logradouro = v("logradouro");
+      const complemento = v("complemento");
+      return complemento ? `${logradouro} - ${complemento}` : logradouro;
     })(),
     numero: v("numero"),
     bairro: v("bairro"),
@@ -73,11 +88,22 @@ async function registrar() {
     senha: v("senha"),
   };
 
-  for (const k in payload) {
-    if (!payload[k]) {
-      notify("Preencha todos os campos obrigatórios.");
-      return;
-    }
+  // Validação básica
+  if (
+    !payload.tipo_pessoa ||
+    !payload.cpf_cnpj ||
+    !payload.nome ||
+    !payload.email ||
+    !payload.senha ||
+    !payload.cep ||
+    !payload.endereco ||
+    !payload.numero ||
+    !payload.bairro ||
+    !payload.cidade ||
+    !payload.estado
+  ) {
+    notify("Preencha todos os campos obrigatórios antes de salvar.");
+    return;
   }
 
   try {
@@ -88,22 +114,27 @@ async function registrar() {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      notify(err?.detail || "Erro ao cadastrar.");
+      const errorData = await res.json().catch(() => null);
+      const msg = errorData?.detail || "Erro ao salvar o cadastro.";
+      notify(msg);
       return;
     }
 
-    notify("Cadastro realizado com sucesso!");
-    window.location.href = "index.html";
+    const data = await res.json();
+    console.log("Cadastro OK:", data);
 
+    notify("Cadastro realizado com sucesso!");
+
+    // Depois do cadastro, envia para o login
+    window.location.href = "index.html";
   } catch (err) {
-    console.error(err);
-    notify("Erro ao enviar o cadastro.");
+    console.error("Erro no cadastro:", err);
+    notify("Não foi possível concluir o cadastro. Tente novamente em instantes.");
   }
 }
 
 // ===============================
-// LOGIN
+// LOGIN (caso queira usar o mesmo arquivo no index.html)
 // ===============================
 
 async function login() {
@@ -111,7 +142,7 @@ async function login() {
   const senha = v("senha");
 
   if (!email || !senha) {
-    notify("Informe email e senha.");
+    notify("Informe email e senha para entrar.");
     return;
   }
 
@@ -123,62 +154,34 @@ async function login() {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      notify(err?.detail || "Erro ao fazer login.");
+      const errorData = await res.json().catch(() => null);
+      const msg = errorData?.detail || "Não foi possível fazer login.";
+      notify(msg);
       return;
     }
 
     const data = await res.json();
-    console.log("LOGIN OK:", data);
+    console.log("Login OK:", data);
 
-    // 🔥 Aqui está a parte nova, sem conflito:
+    // Aqui futuramente podemos guardar token / dados do usuário
+    // Exemplo simples:
     localStorage.setItem(
       "painel_afiliado_session",
-      JSON.stringify({
-        id: data.id,
-        nome: data.nome,
-        email: data.email,
-        logged_at: new Date().toISOString(),
-      })
+      JSON.stringify({ email, logged_at: new Date().toISOString() })
     );
 
+    notify("Login realizado com sucesso!");
     window.location.href = "painel.html";
-
   } catch (err) {
-    console.error(err);
-    notify("Erro de conexão ao tentar login.");
+    console.error("Erro no login:", err);
+    notify("Erro de conexão ao tentar fazer login.");
   }
 }
 
 // ===============================
-// PROTEGER PAINEL
+// UTILIDADE OPCIONAL: ir para tela de cadastro
+// (caso queira usar no link "Cadastrar" do index.html)
 // ===============================
-
-function protegerPainel() {
-  const session = JSON.parse(localStorage.getItem("painel_afiliado_session"));
-  if (!session) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  if (document.getElementById("nome")) {
-    document.getElementById("nome").innerText = session.nome;
-  }
-  if (document.getElementById("email")) {
-    document.getElementById("email").innerText = session.email;
-  }
-}
-
-// Chamar automaticamente se estiver no painel
-if (window.location.pathname.includes("painel.html")) {
-  protegerPainel();
-}
-
-// ===============================
-// LOGOUT
-// ===============================
-
-function sair() {
-  localStorage.removeItem("painel_afiliado_session");
-  window.location.href = "index.html";
+function cadastrarPrompt() {
+  window.location.href = "cadastro.html";
 }
