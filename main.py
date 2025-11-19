@@ -40,4 +40,4 @@ def create_utm(data: UTMCreateRequest):
 
 # Entry point pro Railway
 if __name__ == "__main__":
-    import uvicorn
+
