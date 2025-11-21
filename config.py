@@ -1,6 +1,23 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
-import time, hmac, hashlib, requests, shutil
+import time, hmac, hashlib, shutil
+
+# "requests" é opcional: se não estiver instalado, criamos um stub mínimo.
+try:
+    import requests as _requests
+except ModuleNotFoundError:  # ambiente sem a lib instalada
+    class _DummyHTTPBasicAuth:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    class _DummyRequests:
+        class auth:
+            HTTPBasicAuth = _DummyHTTPBasicAuth
+
+    requests = _DummyRequests()
+else:
+    requests = _requests
 
 # ===== MAGAZORD (compat com seu app.py) =====
 BASE_URL = "https://pegdobrasil.painel.magazord.com.br/api/v2/site"
@@ -14,6 +31,8 @@ BASE_DIR = Path(__file__).resolve().parent
 DIR_CACHE      = BASE_DIR / "Cache"
 DIR_ETIQUETAS  = BASE_DIR / "Etiquetas"
 DIR_MOVIMENTOS = BASE_DIR / "Movimentos"
+...
+
 DIR_STATIC     = BASE_DIR / "static"
 DIR_TEMPLATES  = BASE_DIR / "templates"
 for d in [DIR_CACHE, DIR_ETIQUETAS, DIR_MOVIMENTOS, DIR_STATIC, DIR_TEMPLATES]:
@@ -82,3 +101,4 @@ DIR_UPLOADS.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTS = {"png","jpg","jpeg","webp","gif"}
 def allowed_image(filename: str) -> bool:
     return "." in filename and filename.rsplit(".",1)[1].lower() in ALLOWED_IMAGE_EXTS
+
