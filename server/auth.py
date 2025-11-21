@@ -6,6 +6,7 @@ from .database import get_db, Base, engine
 from .models import Usuario
 from . import schemas
 
+# Garante que as tabelas existam tanto no SQLite quanto no Postgres
 Base.metadata.create_all(bind=engine)
 
 router = APIRouter()
@@ -15,12 +16,19 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 # -------- CADASTRO --------
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    """Cadastro de usuário usado pelo cadastro.html.
+
+    URL final: /api/auth/register
+    """
+    # E-mail duplicado
     if db.query(Usuario).filter(Usuario.email == data.email).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
+    # CPF / CNPJ duplicado
     if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
         raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
 
+    # Gera hash da senha
     try:
         senha_hash = pwd_context.hash(data.senha)
     except Exception as exc:
@@ -55,6 +63,10 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 # -------- LOGIN --------
 @router.post("/login")
 def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    """Login usado pelo index.html.
+
+    URL final: /api/auth/login
+    """
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
         raise HTTPException(status_code=400, detail="E-mail não encontrado")
@@ -62,57 +74,19 @@ def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     if not pwd_context.verify(data.senha, user.senha_hash):
         raise HTTPException(status_code=400, detail="Senha inválida")
 
+    # Front só precisa saber que deu certo. Aqui já devolvemos dados básicos.
     return {
-        "id": user.id,
-        "nome": user.nome,
-        "email": user.email,
+        "status": "success",
+        "message": "Login realizado com sucesso!",
+        "user": {
+            "id": user.id,
+            "nome": user.nome,
+            "email": user.email,
+        },
     }
 
-# ======================================
-# ROTAS REIN - BUSCAR PRODUTOS (SOMENTE GET)
-# ======================================
-@app.get("/api/rein/buscar_produtos", response_model=ReinBuscaResponse)
-def rein_buscar_produtos(
-    termo: str = "",
-    page: int = 1,
-    per_page: int = 10,
-):
-    """
-    Usa apenas GET /api/v1/produto na REIN.
-    - termo: nome, parte do nome, SKU ou código.
-    - page: página da REIN (1..n).
-    - per_page: só para cálculo de total_pages (a REIN que decide o tamanho real).
-    """
-    # chama a função do projeto antigo (só GET)
-    res = listar_produtos(termo, page=page, per_page=per_page)
-    itens = res.get("items") or res.get("data") or []
 
-    # achata por grade (SKU) e filtra por ativos
-    linhas = preparar_resultados(itens, termo, sku_exato=False, status="ativos")
-
-    # monta resposta padrão
-    total = int(res.get("total", len(linhas)))
-    total_pages = int(res.get("total_pages", 1))
-
-    return ReinBuscaResponse(
-        items=[ReinProdutoLinha(**linha) for linha in linhas],
-        total=total,
-        page=page,
-        per_page=per_page,
-        total_pages=total_pages,
-    )
-@app.get("/api/rein/produto/{produto_id}")
-def rein_detalhe_produto(produto_id: int):
-    """
-    Apenas GET /api/v1/produto/{id} na REIN, sem atualizar nada.
-    """
-    try:
-        data = detalhar_produto(produto_id)
-        return {"ok": True, "data": data}
-    except Exception as e:
-        return {"ok": False, "msg": f"Erro ao buscar detalhe: {e}"}
-
-# -------- LISTA / ADMIN --------
+# -------- LISTA / ADMIN (para futuro painel admin) --------
 @router.get("/users", response_model=list[schemas.UsuarioOut])
 def listar_usuarios(db: Session = Depends(get_db)):
     return db.query(Usuario).all()
@@ -136,11 +110,13 @@ def atualizar_usuario(
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
+    # Troca de e-mail
     if data.email and data.email != user.email:
         if db.query(Usuario).filter(Usuario.email == data.email).first():
             raise HTTPException(status_code=400, detail="E-mail já está em uso")
         user.email = data.email
 
+    # Troca de CPF/CNPJ
     if data.cpf_cnpj and data.cpf_cnpj != user.cpf_cnpj:
         if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
             raise HTTPException(status_code=400, detail="CPF/CNPJ já está em uso")
@@ -201,12 +177,14 @@ def recuperar_conta(data: schemas.PasswordReset, db: Session = Depends(get_db)):
     return {"status": "success", "message": "Senha redefinida com sucesso."}
 
 
-# -------- STUBS PARA PAINEL --------
+# -------- STUBS PARA PAINEL (placeholders) --------
 @router.get("/pedidos/{afiliado_id}")
 def listar_pedidos(afiliado_id: int):
+    """Stub para no futuro listar pedidos de um afiliado."""
     return []
 
 
 @router.get("/saldo/{afiliado_id}")
 def saldo_afiliado(afiliado_id: int):
+    """Stub para no futuro mostrar o saldo do afiliado."""
     return {"total": 0.0}
