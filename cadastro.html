@@ -78,7 +78,7 @@
       opacity: 0;
       transform: translateY(20px);
       transition: opacity 1.5s ease, transform 1.5s ease;
-      pointer-events: none; /* evita clique quando escondido */
+      pointer-events: none;
     }
 
     footer.footer-visible {
@@ -94,8 +94,8 @@
   <main class="flex-1 flex items-center justify-center p-4">
     <!-- CARD DE CADASTRO -->
     <div class="w-full max-w-3xl bg-white shadow-2xl rounded-2xl overflow-hidden">
-      <!-- Cabeçalho com container em gradiente suave, separado -->
-      <div class="px-8 pt-6 pb-5 header-gradient border-b border-slate-100">
+      <!-- Cabeçalho com container em gradiente suave -->
+      <div class="px-8 pt-6 pb-5 header-gradient">
         <div class="flex flex-col items-center gap-2 text-center">
           <!-- LOGO CENTRALIZADA -->
           <img
@@ -122,7 +122,7 @@
 
       <!-- Conteúdo com bloco separado e bordas arredondadas -->
       <div class="px-8 pb-6 pt-6">
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-6 space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-6 space-y-6 mt-6">
           <!-- DADOS BÁSICOS -->
           <section class="space-y-3">
             <h2 class="text-sm font-semibold text-slate-700">Dados do afiliado</h2>
@@ -300,7 +300,6 @@
   <!-- RODAPÉ PEG DO BRASIL (fade in/out no scroll) -->
   <footer class="w-full mt-4 mb-3">
     <div class="w-full max-w-3xl mx-auto text-sm">
-      <!-- Faixa com gradiente animado APENAS ATENDIMENTO -->
       <div class="footer-gradient text-white py-3 px-4 rounded-t-2xl shadow-md">
         <div class="flex flex-col items-center justify-center text-center gap-1">
           <div class="font-semibold text-xs">ATENDIMENTO</div>
@@ -310,7 +309,6 @@
         </div>
       </div>
 
-      <!-- Bloco de contato CENTRALIZADO -->
       <div class="bg-slate-50 text-slate-800 py-5 px-4 border-x border-b border-slate-200 rounded-b-2xl shadow-md">
         <div class="flex flex-col md:flex-row gap-6 items-center justify-center text-center">
           <div class="flex flex-col items-center">
@@ -352,7 +350,6 @@
 
   <script src="auth.js"></script>
 
-  <!-- Script para mostrar/ocultar rodapé com fade in/out ao rolar -->
   <script>
     window.addEventListener('scroll', function () {
       const footer = document.querySelector('footer');
@@ -362,8 +359,6 @@
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
 
-      // Quando o usuário estiver perto do final da página (ex.: 150px do fim),
-      // o rodapé aparece (fade in). Ao sair dessa área, some (fade out).
       if (scrollTop + windowHeight >= docHeight - 150) {
         footer.classList.add('footer-visible');
       } else {
