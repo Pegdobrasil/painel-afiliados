@@ -4,22 +4,29 @@
   <meta charset="UTF-8">
   <title>Cadastro – Painel Afiliados</title>
   <script src="https://cdn.tailwindcss.com"></script>
-<style>
-  .animated-bg {
+
+  <style>
+    .animated-bg {
       background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
       background-size: 400% 400%;
       animation: gradient 15s ease infinite;
     }
+
     @keyframes gradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
     }
-</style>
+  </style>
 </head>
-<body class="animated-bg">
-  
-  class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+
+<body class="animated-bg min-h-screen flex items-center justify-center p-4">
   <div class="w-full max-w-3xl bg-white shadow-2xl rounded-2xl overflow-hidden">
     <!-- Cabeçalho -->
     <div class="px-8 pt-6 pb-4 border-b border-slate-100 flex items-center justify-center">
@@ -30,6 +37,9 @@
           alt="Peg do Brasil"
           class="h-12 w-auto mb-1">
 
+        <div class="text-xs font-semibold text-slate-500 tracking-wide uppercase">
+          Peg do Brasil
+        </div>
         <h1 class="text-2xl font-bold text-slate-900">
           Cadastro de Afiliado
         </h1>
