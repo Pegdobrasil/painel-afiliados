@@ -21,6 +21,82 @@ function msgSenha(text, tipo = "info") {
     "text-xs mt-2 " + (tipo === "erro" ? "text-red-600" : "text-gray-500");
 }
 
+async function buscarProdutosRein(page = 1) {
+  const input = document.getElementById("buscaTermo");
+  const tbody = document.getElementById("tabelaBuscaProdutos");
+  if (!tbody) return;
+
+  const termo = (input?.value || "").trim();
+
+  // estado de carregando
+  tbody.innerHTML =
+    '<tr><td colspan="4" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
+
+  const params = new URLSearchParams();
+  if (termo) params.set("termo", termo);
+  params.set("page", String(page));
+  params.set("per_page", "10");
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/rein/buscar_produtos?` + params.toString()
+    );
+    if (!res.ok) throw new Error("Erro HTTP na busca");
+
+    const data = await res.json();
+    const items = data.items || [];
+
+    if (!items.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="px-3 py-3 text-xs text-slate-400">Nenhum produto encontrado.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = "";
+
+    for (const p of items) {
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-slate-800";
+
+      const estoque = p.estoque ?? 0;
+      const precoAtacado = Number(p.preco_atacado || 0);
+      const precoVarejo = Number(p.preco_varejo || 0);
+
+      tr.innerHTML = `
+        <td class="px-3 py-2 text-xs">${p.sku}</td>
+        <td class="px-3 py-2">
+          <div class="text-xs font-medium">${p.nome || ""}</div>
+          <div class="text-[10px] text-slate-400">
+            NCM: ${p.ncm || "-"} • Estoque: ${estoque} • ${
+        p.ativo ? "Ativo" : "Inativo"
+      }
+          </div>
+        </td>
+        <td class="px-3 py-2 text-xs">
+          <div>Atacado: R$ ${precoAtacado.toFixed(2)}</div>
+          <div>Varejo: R$ ${precoVarejo.toFixed(2)}</div>
+        </td>
+        <td class="px-3 py-2 text-right">
+          <button
+            type="button"
+            class="btn-ver-detalhes inline-flex items-center px-3 py-1 rounded text-[11px] bg-sky-600 text-white hover:bg-sky-500"
+            data-produto-id="${p.produto_id}"
+            data-grade-id="${p.grade_id}"
+          >
+            Ver detalhes
+          </button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    }
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="px-3 py-3 text-xs text-red-400">Erro ao buscar produtos.</td></tr>';
+  }
+}
+
 function protegerPainel() {
   const session = getSession();
   if (!session) {
@@ -38,7 +114,21 @@ function protegerPainel() {
   carregarSaldo(session.id);
   carregarPedidos(session.id);
   carregarMinhaConta(session.id);
+
+  // === Buscar Produto (REIN) ===
+  const btnBuscar = document.getElementById("btnBuscarProduto");
+  if (btnBuscar) {
+    btnBuscar.addEventListener("click", function () {
+      buscarProdutosRein(1);
+    });
+  }
+
+  // se a tabela existir, já carrega a primeira página sem termo
+  if (document.getElementById("tabelaBuscaProdutos")) {
+    buscarProdutosRein(1);
+  }
 }
+
 
 async function carregarSaldo(id) {
   try {
