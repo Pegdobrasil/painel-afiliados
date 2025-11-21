@@ -101,6 +101,16 @@ def rein_buscar_produtos(
         per_page=per_page,
         total_pages=total_pages,
     )
+@app.get("/api/rein/produto/{produto_id}")
+def rein_detalhe_produto(produto_id: int):
+    """
+    Apenas GET /api/v1/produto/{id} na REIN, sem atualizar nada.
+    """
+    try:
+        data = detalhar_produto(produto_id)
+        return {"ok": True, "data": data}
+    except Exception as e:
+        return {"ok": False, "msg": f"Erro ao buscar detalhe: {e}"}
 
 # -------- LISTA / ADMIN --------
 @router.get("/users", response_model=list[schemas.UsuarioOut])
