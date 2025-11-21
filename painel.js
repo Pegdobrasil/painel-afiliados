@@ -137,6 +137,43 @@ if (inputBusca) {
 }
 
 
+async function verDetalhesRein(produtoId, botao) {
+  if (!produtoId) return;
+  const oldText = botao.textContent;
+  botao.disabled = true;
+  botao.textContent = "Carregando...";
+
+  try {
+    const res = await fetch(`${API_BASE}/rein/produto/${produtoId}`);
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.msg || "Erro ao carregar detalhes.");
+      return;
+    }
+    const det = data.data || {};
+
+    // Aqui é só visualização. Você pode depois trocar o alert por um modal bonitinho.
+    alert(
+      `Produto: ${det.Nome || ""}\n` +
+        `NCM: ${det.Ncm || ""}\n` +
+        `ID: ${det.Id || produtoId}`
+    );
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao carregar detalhes do produto.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = oldText;
+  }
+}
+
+// delegação de evento para os botões da tabela
+document.addEventListener("click", function (ev) {
+  const btn = ev.target.closest(".btn-ver-detalhes");
+  if (!btn) return;
+  const produtoId = btn.getAttribute("data-produto-id");
+  verDetalhesRein(produtoId, btn);
+});
 
 async function carregarSaldo(id) {
   try {
