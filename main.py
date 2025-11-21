@@ -35,6 +35,25 @@ def root():
 class UTMCreateRequest(BaseModel):
     afiliado_id: int
     url: str
+    
+class ReinProdutoLinha(BaseModel):
+    produto_id: int
+    grade_id: int
+    sku: str
+    nome: str
+    ncm: Optional[str] = None
+    estoque: float
+    ativo: bool
+    preco_atacado: float
+    preco_varejo: float
+
+
+class ReinBuscaResponse(BaseModel):
+    items: List[ReinProdutoLinha]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
 
 
 @app.post("/api/utm/create")
@@ -49,4 +68,5 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
 
