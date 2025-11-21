@@ -22,7 +22,7 @@ except ModuleNotFoundError:
         import math
         import requests
         import config
-
+        
         EP_LIST = "/api/v1/produto"
 
         def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
@@ -256,3 +256,4 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
