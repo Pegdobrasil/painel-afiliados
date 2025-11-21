@@ -1,216 +1,180 @@
-/*
-  Este arquivo CSS deve ser salvo externamente (ex: style-personalizado.css)
-  e linkado no HTML APÓS o script do TailwindCSS para garantir a sobrescrita dos estilos.
-  <link rel="stylesheet" href="style-personalizado.css">
-*/
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Afiliado</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-:root {
-  /* Paleta de Cores Peg do Brasil */
-  --primary-blue: #0057B8;
-  --dark-blue: #003F86;
-  --light-blue: #E6F1FF;
-  --soft-gray: #F5F7FA;
-  --text-gray: #505050;
+<body class="bg-gray-100">
+  <div class="max-w-6xl mx-auto p-6">
 
-  /* Variáveis de Tema (Modo Claro Padrão) */
-  --bg-page: var(--soft-gray);
-  --bg-card: #ffffff;
-  --text-main: var(--text-gray);
-  --text-heading: var(--dark-blue);
-  --text-label: var(--dark-blue);
-  --border-color: #e2e8f0;
-  --input-bg: #ffffff;
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Painel do Afiliado</h1>
 
-  /* Estilos Premium */
-  --shadow-premium: 0 10px 30px -5px rgba(0, 87, 184, 0.15), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
-  --shadow-hover: 0 20px 40px -5px rgba(0, 87, 184, 0.2);
-  --radius-card: 18px;
-  --radius-input: 12px;
-  --radius-button: 12px;
-}
+      <div class="flex gap-3">
+        <button onclick="scrollMinhaConta()"
+          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
+          Minha Conta
+        </button>
 
-/* Modo Escuro Automático */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-page: #0f172a; /* Dark Slate background */
-    --bg-card: #1e293b; /* Slate 800 card background */
-    --text-main: #cbd5e1; /* Slate 300 text */
-    --text-heading: #E6F1FF; /* Light blue headings for contrast */
-    --text-label: #94a3b8; /* Slate 400 labels */
-    --border-color: #334155; /* Slate 700 borders */
-    --input-bg: #0f172a;
-    --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-    --shadow-hover: 0 20px 40px -5px rgba(0, 0, 0, 0.6);
-  }
-}
+        <button onclick="scrollAlterarSenha()"
+          class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+          Alterar Senha
+        </button>
 
-/* --- Reset Global e Tipografia --- */
+        <button onclick="sair()"
+          class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Sair
+        </button>
+      </div>
+    </div>
 
-/* Sobrescreve o bg-gray-100 do body */
-body.bg-gray-100 {
-  background-color: var(--bg-page) !important;
-  color: var(--text-main) !important;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white shadow rounded p-4">
+        <h2 class="text-lg font-semibold mb-2">Dados</h2>
+        <p><b>Nome:</b> <span id="nome"></span></p>
+        <p><b>Email:</b> <span id="email"></span></p>
+        <p><b>ID Interno:</b> <span id="id"></span></p>
+      </div>
 
-/* Títulos */
-h1, h2, .font-bold, .font-semibold {
-  color: var(--text-heading) !important;
-  letter-spacing: -0.025em;
-}
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Saldo</h2>
+        <p class="text-2xl font-bold text-green-600" id="saldo">R$ 0,00</p>
+      </div>
 
-/* Labels de formulário */
-label.text-sm.text-gray-600 {
-  color: var(--text-label) !important;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  display: block;
-}
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Pedidos</h2>
+        <p class="text-2xl font-bold text-blue-600" id="pedidos">0</p>
+      </div>
+    </div>
 
-/* --- Estilização dos Cards --- */
+    <!-- Gerar link -->
+    <div class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-2">Gerar Link de Afiliado</h2>
+      <input type="text" id="urlProduto" placeholder="Cole a URL do produto"
+        class="w-full border p-2 rounded">
+      <button onclick="gerarLink()"
+        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+        Gerar
+      </button>
+      <p class="mt-2"><b>Link:</b> <span id="linkAfiliado"></span></p>
+    </div>
 
-/* Seleciona todos os containers com estilo de card do Tailwind */
-.bg-white.shadow.rounded.p-4 {
-  background-color: var(--bg-card) !important;
-  box-shadow: var(--shadow-premium) !important;
-  border-radius: var(--radius-card) !important;
-  border: 1px solid var(--border-color);
-  padding: 2rem !important; /* Aumenta o espaçamento interno para visual mais limpo */
-  transition: all 0.3s ease;
-}
+    <!-- Minha conta -->
+    <div id="sec_minhaconta" class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-4">Minha Conta</h2>
 
-/* Efeito de hover suave nos cards */
-.bg-white.shadow.rounded.p-4:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-hover) !important;
-  border-color: var(--primary-blue);
-}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-gray-600">Tipo de Pessoa</label>
+          <select id="conta_tipo_pessoa" class="w-full border rounded p-2">
+            <option value="PF">Pessoa Física (CPF)</option>
+            <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">CPF / CNPJ</label>
+          <input id="conta_cpf_cnpj" type="text"
+            class="w-full border rounded p-2">
+        </div>
 
-/* --- Destaques de Texto (Saldo e Pedidos) --- */
+        <div>
+          <label class="text-sm text-gray-600">Nome / Razão Social</label>
+          <input id="conta_nome" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Email</label>
+          <input id="conta_email" type="email"
+            class="w-full border rounded p-2">
+        </div>
 
-/* Reescreve as cores utilitárias do Tailwind para usar a paleta azul */
-#saldo.text-green-600,
-#pedidos.text-blue-600 {
-  color: var(--primary-blue) !important;
-  font-weight: 800;
-  font-size: 2.5rem; /* Aumenta o tamanho da fonte */
-}
+        <div>
+          <label class="text-sm text-gray-600">Telefone</label>
+          <input id="conta_telefone" type="tel"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">CEP</label>
+          <input id="conta_cep" type="text"
+            class="w-full border rounded p-2">
+        </div>
 
-/* Ajuste de contraste para modo escuro */
-@media (prefers-color-scheme: dark) {
-  #saldo.text-green-600,
-  #pedidos.text-blue-600 {
-    color: #60a5fa !important; /* Azul mais claro para contraste */
-  }
-}
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Endereço</label>
+          <input id="conta_endereco" type="text"
+            class="w-full border rounded p-2">
+        </div>
 
-/* --- Formulários (Inputs e Selects) --- */
+        <div>
+          <label class="text-sm text-gray-600">Número</label>
+          <input id="conta_numero" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Bairro</label>
+          <input id="conta_bairro" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Cidade</label>
+          <input id="conta_cidade" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Estado (UF)</label>
+          <input id="conta_estado" maxlength="2"
+            class="w-full border rounded p-2 uppercase">
+        </div>
+      </div>
 
-input.border,
-select.border {
-  background-color: var(--input-bg) !important;
-  border: 2px solid var(--border-color) !important;
-  color: var(--text-main) !important;
-  border-radius: var(--radius-input) !important;
-  padding: 0.875rem 1rem !important; /* Inputs mais altos e confortáveis */
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
+      <div class="flex justify-end mt-4">
+        <button onclick="salvarMinhaConta()"
+          class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          Salvar dados
+        </button>
+      </div>
 
-input.border:focus,
-select.border:focus {
-  outline: none;
-  border-color: var(--primary-blue) !important;
-  box-shadow: 0 0 0 4px var(--light-blue) !important;
-}
+      <p id="msg_conta" class="text-xs text-gray-500 mt-2"></p>
+    </div>
 
-/* Estilização customizada do select para remover a seta padrão do navegador e usar uma SVG */
-select.border {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%230057B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 1rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: 3rem !important;
-}
+    <!-- Alterar Senha -->
+    <div id="sec_alterarsenha" class="bg-white shadow rounded p-4 mt-6 mb-10">
+      <h2 class="text-lg font-semibold mb-4">Alterar Senha</h2>
 
-/* --- Botões --- */
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="text-sm text-gray-600">Senha atual</label>
+          <input id="senha_atual" type="password"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Nova senha</label>
+          <input id="senha_nova" type="password"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Confirmar nova senha</label>
+          <input id="senha_nova2" type="password"
+            class="w-full border rounded p-2">
+        </div>
+      </div>
 
-/* Estilo base para todos os botões */
-button {
-  border-radius: var(--radius-button) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.025em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  text-transform: uppercase;
-  font-size: 0.875rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
+      <div class="flex justify-end mt-4">
+        <button onclick="alterarSenha()"
+          class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          Alterar senha
+        </button>
+      </div>
 
-/* Efeito de hover e active genérico */
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 87, 184, 0.3), 0 4px 6px -2px rgba(0, 87, 184, 0.1) !important;
-}
-button:active {
-  transform: translateY(0px);
-}
+      <p id="msg_senha" class="text-xs text-gray-500 mt-2"></p>
+    </div>
 
-/* Botões do Cabeçalho - Padronizando para a paleta Azul */
-/* Minha Conta (era cinza) */
-button[class*="bg-gray-700"] {
-  background-color: var(--bg-page) !important;
-  color: var(--primary-blue) !important;
-  border: 2px solid var(--primary-blue) !important;
-}
-button[class*="bg-gray-700"]:hover {
-  background-color: var(--primary-blue) !important;
-  color: white !important;
-}
+  </div>
 
-/* Alterar Senha (era amarelo) - Mudando para azul escuro */
-button[class*="bg-yellow-600"] {
-  background-color: var(--dark-blue) !important;
-}
-button[class*="bg-yellow-600"]:hover {
-  background-color: var(--primary-blue) !important;
-}
-
-/* Sair (era vermelho) - Mantém vermelho mas estilo premium */
-button[class*="bg-red-600"] {
-  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
-}
-button[class*="bg-red-600"]:hover {
-    box-shadow: 0 10px 20px rgba(220, 38, 38, 0.4) !important;
-}
-
-/* Botões de Ação (Gerar Link, Salvar, Alterar Senha) */
-/* Padroniza todos os botões de ação principais (azul, verde, azul-escuro) para o Azul Primário */
-button[onclick="gerarLink()"],
-button[onclick="salvarMinhaConta()"],
-button[onclick="alterarSenha()"] {
-  background-color: var(--primary-blue) !important;
-  padding: 1rem 2rem !important; /* Botões maiores */
-  font-size: 1rem !important;
-}
-
-button[onclick="gerarLink()"]:hover,
-button[onclick="salvarMinhaConta()"]:hover,
-button[onclick="alterarSenha()"]:hover {
-  background-color: var(--dark-blue) !important;
-}
-
-/* Link gerado */
-#linkAfiliado {
-  color: var(--primary-blue);
-  font-weight: 600;
-  word-break: break-all;
-}
-
-/* Mensagens de erro/sucesso */
-#msg_conta, #msg_senha {
-    font-weight: 600;
-    font-size: 0.875rem;
-}
+  <script src="painel.js"></script>
+</body>
+</html>
