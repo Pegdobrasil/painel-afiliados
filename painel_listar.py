@@ -2,6 +2,14 @@
 from typing import List, Dict, Any
 import math
 import config
+# -*- coding: utf-8 -*-
+"""
+Wrapper simples para reuso das funções de listagem da REIN no painel.
+
+Mantemos este arquivo separado apenas para compatibilidade
+com imports antigos (`from painel_listar import ...`).
+"""
+from produto_listar import listar_produtos, preparar_resultados
 
 EP_LIST = "/api/v1/produto"
 
