@@ -6,7 +6,6 @@ import config
 
 EP_LIST = "/api/v1/produto"
 
-
 def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
     tot = 0.0
     for l in (locais or []):
@@ -15,7 +14,6 @@ def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
         except Exception:
             pass
     return tot
-
 
 def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
     out: Dict[str, float] = {}
@@ -29,11 +27,11 @@ def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
         "VAREJO":  out.get("TABELA VAREJO")  or out.get("VAREJO")  or 0.0,
     }
 
-
 def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
     """
     Busca produtos na REIN com paginação por 'page'.
-    NÃO envia 'limit'. O 'per_page' é usado só para calcular 'total_pages'.
+    NÃO envia 'limit' (a REIN retornava 400). O 'per_page' é usado só para
+    calcular 'total_pages' com base no 'total' retornado pela API.
     Retorna: { items, total, page, per_page, total_pages }
     """
     page = max(1, int(page or 1))
@@ -43,7 +41,7 @@ def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, 
     r = requests.get(
         url,
         headers=config.rein_headers(EP_LIST),
-        params={"page": page, "termo": termo},
+        params={"page": page, "termo": termo},  # sem 'limit'
         timeout=60,
     )
     r.raise_for_status()
@@ -74,7 +72,6 @@ def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, 
         "total_pages": total_pages,
     }
 
-
 def preparar_resultados(
     items: List[Dict[str, Any]],
     termo: str,
@@ -83,8 +80,7 @@ def preparar_resultados(
 ) -> List[Dict[str, Any]]:
     """
     Flatteia os itens por grade e aplica filtros.
-    Retorna linhas com: produto_id, grade_id, sku, nome, estoque,
-    ativo, preco_atacado, preco_varejo.
+    Retorna linhas com: produto_id, grade_id, sku, nome, estoque, ativo, preco_atacado, preco_varejo.
     """
     termo = (termo or "").strip()
     linhas: List[Dict[str, Any]] = []
