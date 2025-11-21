@@ -4,106 +4,305 @@
   <meta charset="UTF-8">
   <title>Cadastro – Painel Afiliados</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonte mais elegante (Montserrat) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    * {
+      font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .animated-bg {
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+
+    .footer-gradient {
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+
+    @keyframes gradient {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div class="bg-white shadow-xl rounded-lg p-8 w-full max-w-2xl">
-    <h1 class="text-2xl font-bold mb-6 text-center">Cadastro de Afiliado</h1>
+<body class="animated-bg min-h-screen flex flex-col">
+  <!-- CONTEÚDO PRINCIPAL CENTRALIZADO -->
+  <main class="flex-1 flex items-center justify-center p-4">
+    <!-- CARD DE CADASTRO -->
+    <div class="w-full max-w-3xl bg-white shadow-2xl rounded-2xl overflow-hidden">
+      <!-- Cabeçalho -->
+      <div class="px-8 pt-6 pb-4 border-b border-slate-100 flex items-center justify-center">
+        <div class="flex flex-col items-center gap-2 text-center">
+          <!-- LOGO CENTRALIZADA -->
+          <img
+            src="https://pegdobrasil.cdn.magazord.com.br/img/2025/11/produto/161412/logobonita-e-formosa.png?_gl=1*vvyubv*_ga*ODI4MjY3NDk4LjE3NTk0MDc0MDU.*_ga_4JXK3QVJ6X*czE3NjM3NDgxMDgkbzE1MSRnMSR0MTc2Mzc0ODgxOSRqMjckbDAkaDA."
+            alt="Peg do Brasil"
+            class="h-12 w-auto mb-1">
 
-    <!-- DADOS BÁSICOS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="text-sm text-gray-600">Tipo de Pessoa</label>
-        <select id="tipo_pessoa" class="w-full border rounded p-2">
-          <option value="PF">Pessoa Física (CPF)</option>
-          <option value="PJ">Pessoa Jurídica (CNPJ)</option>
-        </select>
+          <div class="text-[11px] font-semibold text-slate-500 tracking-[0.15em] uppercase">
+            Peg do Brasil
+          </div>
+          <h1 class="text-2xl md:text-3xl font-semibold text-slate-900">
+            Cadastro de Afiliado
+          </h1>
+          <p class="text-sm text-slate-500 mt-1 max-w-md">
+            Preencha os dados abaixo para criar seu acesso ao painel.
+          </p>
+
+          <a href="index.html"
+            class="mt-3 text-xs font-medium text-blue-600 hover:text-blue-700 underline-offset-2 hover:underline">
+            Já tenho cadastro
+          </a>
+        </div>
       </div>
 
-      <div>
-        <label class="text-sm text-gray-600">CPF / CNPJ</label>
-        <input id="cpf_cnpj" type="text" class="w-full border rounded p-2"
-               placeholder="Apenas números">
-      </div>
+      <!-- Conteúdo -->
+      <div class="px-8 pb-6 pt-4 space-y-6">
 
-      <div>
-        <label class="text-sm text-gray-600">Nome completo / Razão social</label>
-        <input id="nome" type="text" class="w-full border rounded p-2">
-      </div>
+        <!-- DADOS BÁSICOS -->
+        <section class="space-y-3">
+          <h2 class="text-sm font-semibold text-slate-700">Dados do afiliado</h2>
 
-      <div>
-        <label class="text-sm text-gray-600">Email</label>
-        <input id="email" type="email" class="w-full border rounded p-2">
-      </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Tipo de Pessoa
+              </label>
+              <select
+                id="tipo_pessoa"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                <option value="PF">Pessoa Física (CPF)</option>
+                <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+              </select>
+            </div>
 
-      <div>
-        <label class="text-sm text-gray-600">Senha</label>
-        <input id="senha" type="password" class="w-full border rounded p-2">
-      </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                CPF / CNPJ
+              </label>
+              <input
+                id="cpf_cnpj"
+                type="text"
+                placeholder="Somente números"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
 
-      <div>
-        <label class="text-sm text-gray-600">Telefone</label>
-        <input id="telefone" type="tel" class="w-full border rounded p-2"
-               placeholder="(xx) xxxxx-xxxx">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Nome completo / Razão social
+              </label>
+              <input
+                id="nome"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Senha
+              </label>
+              <input
+                id="senha"
+                type="password"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Telefone
+              </label>
+              <input
+                id="telefone"
+                type="tel"
+                placeholder="(xx) xxxxx-xxxx"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+          </div>
+        </section>
+
+        <!-- ENDEREÇO -->
+        <section class="space-y-3">
+          <h2 class="text-sm font-semibold text-slate-700">Endereço</h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                CEP
+              </label>
+              <input
+                id="cep"
+                type="text"
+                placeholder="Somente números"
+                onblur="buscarCep()"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Logradouro
+              </label>
+              <input
+                id="logradouro"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Bairro
+              </label>
+              <input
+                id="bairro"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Cidade
+              </label>
+              <input
+                id="cidade"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                UF
+              </label>
+              <input
+                id="uf"
+                type="text"
+                maxlength="2"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Número
+              </label>
+              <input
+                id="numero"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Complemento
+              </label>
+              <input
+                id="complemento"
+                type="text"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+            </div>
+          </div>
+        </section>
+
+        <!-- AÇÕES -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2">
+          <a href="index.html"
+            class="inline-flex items-center justify-center text-sm font-medium text-slate-500 hover:text-blue-600">
+            Voltar ao login
+          </a>
+
+          <button
+            type="button"
+            onclick="registrar()"
+            class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-md transition-all">
+            Salvar cadastro
+          </button>
+        </div>
       </div>
     </div>
+  </main>
 
-    <!-- ENDEREÇO -->
-    <h2 class="text-lg font-semibold mt-4 mb-2">Endereço</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-      <div>
-        <label class="text-sm text-gray-600">CEP</label>
-        <input id="cep" type="text" class="w-full border rounded p-2"
-               placeholder="Somente números"
-               onblur="buscarCep()">
+  <!-- RODAPÉ PEG DO BRASIL CENTRALIZADO (MESMA LARGURA DO CARD) -->
+  <footer class="w-full mt-4 mb-3">
+    <div class="w-full max-w-3xl mx-auto text-sm">
+      <!-- Faixa com gradiente animado APENAS ATENDIMENTO -->
+      <div class="footer-gradient text-white py-3 px-4 rounded-t-2xl shadow-md">
+        <div class="flex flex-col items-center justify-center text-center gap-1">
+          <div class="font-semibold text-xs">ATENDIMENTO</div>
+          <div class="text-[11px] leading-snug">
+            Seg. à Sex. 09h00 às 18h00 • Sáb. 09h00 às 13h00
+          </div>
+        </div>
       </div>
 
-      <div class="md:col-span-2">
-        <label class="text-sm text-gray-600">Logradouro</label>
-        <input id="logradouro" type="text" class="w-full border rounded p-2">
+      <!-- Bloco de contato CENTRALIZADO -->
+      <div class="bg-slate-50 text-slate-800 py-5 px-4 border-x border-b border-slate-200 rounded-b-2xl shadow-md">
+        <div class="flex flex-col md:flex-row gap-6 items-center justify-center text-center">
+          <div class="flex flex-col items-center">
+            <h3 class="text-xs font-semibold tracking-wide uppercase mb-2">
+              Contato
+            </h3>
+            <ul class="space-y-1.5 text-[13px]">
+              <li>Telefone: (41) 3094-7500</li>
+              <li>WhatsApp: (41) 3094-7500</li>
+              <li>Email: contato@pegdobrasil.com.br</li>
+            </ul>
+          </div>
+          <div class="flex flex-col items-center">
+            <h3 class="text-xs font-semibold tracking-wide uppercase mb-2">
+              Endereço
+            </h3>
+            <p class="text-[13px] leading-snug">
+              Rua das Carmelitas, 2815 – Boqueirão<br>
+              Curitiba – PR – CEP 81650-060<br>
+              CNPJ: 11.352.140/0001-45
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 text-[11px] text-slate-500 text-center">
+          Atacado Peg do Brasil – Todos os direitos reservados – 
+          <a
+            href="https://www.pegdobrasil.com.br"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="underline hover:text-blue-600"
+          >
+            www.pegdobrasil.com.br
+          </a>
+        </div>
       </div>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-      <div class="md:col-span-2">
-        <label class="text-sm text-gray-600">Bairro</label>
-        <input id="bairro" type="text" class="w-full border rounded p-2">
-      </div>
-      <div>
-        <label class="text-sm text-gray-600">Cidade</label>
-        <input id="cidade" type="text" class="w-full border rounded p-2">
-      </div>
-      <div>
-        <label class="text-sm text-gray-600">UF</label>
-        <input id="uf" type="text" maxlength="2"
-               class="w-full border rounded p-2 uppercase">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-      <div>
-        <label class="text-sm text-gray-600">Número</label>
-        <input id="numero" type="text" class="w-full border rounded p-2">
-      </div>
-      <div class="md:col-span-2">
-        <label class="text-sm text-gray-600">Complemento</label>
-        <input id="complemento" type="text" class="w-full border rounded p-2">
-      </div>
-    </div>
-
-    <!-- AÇÕES -->
-    <div class="flex justify-between items-center mt-6">
-      <a href="index.html" class="text-sm text-gray-500 hover:underline">
-        Já tenho cadastro
-      </a>
-
-      <button onclick="registrar()"
-        class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
-        Salvar cadastro
-      </button>
-    </div>
-  </div>
+  </footer>
 
   <script src="auth.js"></script>
 </body>
