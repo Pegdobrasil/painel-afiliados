@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import List, Dict, Any
 import math
-import requests
 import config
 
 EP_LIST = "/api/v1/produto"
