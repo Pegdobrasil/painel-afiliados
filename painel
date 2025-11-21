@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Afiliado</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+  <div class="max-w-6xl mx-auto p-6">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Painel do Afiliado</h1>
+
+      <div class="flex gap-3">
+        <button onclick="scrollMinhaConta()"
+          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
+          Minha Conta
+        </button>
+
+        <button onclick="scrollAlterarSenha()"
+          class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+          Alterar Senha
+        </button>
+
+        <button onclick="sair()"
+          class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Sair
+        </button>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white shadow rounded p-4">
+        <h2 class="text-lg font-semibold mb-2">Dados</h2>
+        <p><b>Nome:</b> <span id="nome"></span></p>
+        <p><b>Email:</b> <span id="email"></span></p>
+        <p><b>ID Interno:</b> <span id="id"></span></p>
+      </div>
+
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Saldo</h2>
+        <p class="text-2xl font-bold text-green-600" id="saldo">R$ 0,00</p>
+      </div>
+
+      <div class="bg-white shadow rounded p-4 text-center">
+        <h2 class="text-lg font-semibold">Pedidos</h2>
+        <p class="text-2xl font-bold text-blue-600" id="pedidos">0</p>
+      </div>
+    </div>
+
+    <!-- Gerar link -->
+    <div class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-2">Gerar Link de Afiliado</h2>
+      <input type="text" id="urlProduto" placeholder="Cole a URL do produto"
+        class="w-full border p-2 rounded">
+      <button onclick="gerarLink()"
+        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+        Gerar
+      </button>
+      <p class="mt-2"><b>Link:</b> <span id="linkAfiliado"></span></p>
+    </div>
+
+    <!-- Minha conta -->
+    <div id="sec_minhaconta" class="bg-white shadow rounded p-4 mt-6">
+      <h2 class="text-lg font-semibold mb-4">Minha Conta</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-gray-600">Tipo de Pessoa</label>
+          <select id="conta_tipo_pessoa" class="w-full border rounded p-2">
+            <option value="PF">Pessoa Física (CPF)</option>
+            <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">CPF / CNPJ</label>
+          <input id="conta_cpf_cnpj" type="text"
+            class="w-full border rounded p-2">
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-600">Nome / Razão Social</label>
+          <input id="conta_nome" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Email</label>
+          <input id="conta_email" type="email"
+            class="w-full border rounded p-2">
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-600">Telefone</label>
+          <input id="conta_telefone" type="tel"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">CEP</label>
+          <input id="conta_cep" type="text"
+            class="w-full border rounded p-2">
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-sm text-gray-600">Endereço</label>
+          <input id="conta_endereco" type="text"
+            class="w-full border rounded p-2">
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-600">Número</label>
+          <input id="conta_numero" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Bairro</label>
+          <input id="conta_bairro" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Cidade</label>
+          <input id="conta_cidade" type="text"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Estado (UF)</label>
+          <input id="conta_estado" maxlength="2"
+            class="w-full border rounded p-2 uppercase">
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <button onclick="salvarMinhaConta()"
+          class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          Salvar dados
+        </button>
+      </div>
+
+      <p id="msg_conta" class="text-xs text-gray-500 mt-2"></p>
+    </div>
+
+    <!-- Alterar Senha -->
+    <div id="sec_alterarsenha" class="bg-white shadow rounded p-4 mt-6 mb-10">
+      <h2 class="text-lg font-semibold mb-4">Alterar Senha</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="text-sm text-gray-600">Senha atual</label>
+          <input id="senha_atual" type="password"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Nova senha</label>
+          <input id="senha_nova" type="password"
+            class="w-full border rounded p-2">
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">Confirmar nova senha</label>
+          <input id="senha_nova2" type="password"
+            class="w-full border rounded p-2">
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <button onclick="alterarSenha()"
+          class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          Alterar senha
+        </button>
+      </div>
+
+      <p id="msg_senha" class="text-xs text-gray-500 mt-2"></p>
+    </div>
+
+  </div>
+
+  <script src="painel.js"></script>
+</body>
+</html>
