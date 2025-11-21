@@ -24,6 +24,12 @@
       animation: gradient 15s ease infinite;
     }
 
+    .footer-gradient {
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+
     @keyframes gradient {
       0% {
         background-position: 0% 50%;
@@ -248,31 +254,31 @@
   <!-- RODAPÉ PEG DO BRASIL CENTRALIZADO -->
   <footer class="w-full mt-4 mb-3">
     <div class="max-w-5xl mx-auto text-sm">
-      <!-- Faixa azul com informações principais -->
-      <div class="bg-[#0050A4] text-white py-3 px-4 rounded-t-2xl shadow-md">
+      <!-- Faixa com gradiente animado e itens alinhados -->
+      <div class="footer-gradient text-white py-3 px-4 rounded-t-2xl shadow-md">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
-          <div>
+          <div class="flex flex-col items-center justify-center gap-1">
             <div class="font-semibold text-xs">ATENDIMENTO</div>
-            <div class="text-[11px] leading-snug mt-1">
+            <div class="text-[11px] leading-snug">
               Seg. à Sex. 09h00 às 18h00<br>
               Sáb. 09h00 às 13h00
             </div>
           </div>
-          <div>
+          <div class="flex flex-col items-center justify-center gap-1">
             <div class="font-semibold text-xs">TROCAS E DEVOLUÇÕES</div>
-            <div class="text-[11px] leading-snug mt-1">
+            <div class="text-[11px] leading-snug">
               Até 7 dias para devolver a compra
             </div>
           </div>
-          <div>
+          <div class="flex flex-col items-center justify-center gap-1">
             <div class="font-semibold text-xs">FRETE</div>
-            <div class="text-[11px] leading-snug mt-1">
+            <div class="text-[11px] leading-snug">
               Enviamos para todo o Brasil
             </div>
           </div>
-          <div>
+          <div class="flex flex-col items-center justify-center gap-1">
             <div class="font-semibold text-xs">PARCELAMENTO</div>
-            <div class="text-[11px] leading-snug mt-1">
+            <div class="text-[11px] leading-snug">
               Condições especiais para lojistas
             </div>
           </div>
