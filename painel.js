@@ -127,7 +127,15 @@ function protegerPainel() {
   if (document.getElementById("tabelaBuscaProdutos")) {
     buscarProdutosRein(1);
   }
+  const inputBusca = document.getElementById("buscaTermo");
+if (inputBusca) {
+  inputBusca.addEventListener("keyup", function (ev) {
+    if (ev.key === "Enter") {
+      buscarProdutosRein(1);
+    }
+  });
 }
+
 
 
 async function carregarSaldo(id) {
