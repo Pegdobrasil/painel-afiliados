@@ -68,6 +68,39 @@ def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
         "email": user.email,
     }
 
+# ======================================
+# ROTAS REIN - BUSCAR PRODUTOS (SOMENTE GET)
+# ======================================
+@app.get("/api/rein/buscar_produtos", response_model=ReinBuscaResponse)
+def rein_buscar_produtos(
+    termo: str = "",
+    page: int = 1,
+    per_page: int = 10,
+):
+    """
+    Usa apenas GET /api/v1/produto na REIN.
+    - termo: nome, parte do nome, SKU ou código.
+    - page: página da REIN (1..n).
+    - per_page: só para cálculo de total_pages (a REIN que decide o tamanho real).
+    """
+    # chama a função do projeto antigo (só GET)
+    res = listar_produtos(termo, page=page, per_page=per_page)
+    itens = res.get("items") or res.get("data") or []
+
+    # achata por grade (SKU) e filtra por ativos
+    linhas = preparar_resultados(itens, termo, sku_exato=False, status="ativos")
+
+    # monta resposta padrão
+    total = int(res.get("total", len(linhas)))
+    total_pages = int(res.get("total_pages", 1))
+
+    return ReinBuscaResponse(
+        items=[ReinProdutoLinha(**linha) for linha in linhas],
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+    )
 
 # -------- LISTA / ADMIN --------
 @router.get("/users", response_model=list[schemas.UsuarioOut])
