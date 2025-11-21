@@ -41,6 +41,20 @@
         background-position: 0% 50%;
       }
     }
+
+    /* ANIMAÇÃO DO RODAPÉ (fade in / fade out) */
+    footer {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      pointer-events: none; /* evita clique quando escondido */
+    }
+
+    footer.footer-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
   </style>
 </head>
 
@@ -251,7 +265,7 @@
     </div>
   </main>
 
-  <!-- RODAPÉ PEG DO BRASIL CENTRALIZADO (MESMA LARGURA DO CARD) -->
+  <!-- RODAPÉ PEG DO BRASIL (fade in/out no scroll) -->
   <footer class="w-full mt-4 mb-3">
     <div class="w-full max-w-3xl mx-auto text-sm">
       <!-- Faixa com gradiente animado APENAS ATENDIMENTO -->
@@ -305,5 +319,25 @@
   </footer>
 
   <script src="auth.js"></script>
+
+  <!-- Script para mostrar/ocultar rodapé com fade in/out ao rolar -->
+  <script>
+    window.addEventListener('scroll', function () {
+      const footer = document.querySelector('footer');
+      if (!footer) return;
+
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      // Quando o usuário estiver perto do final da página (ex.: 150px do fim),
+      // o rodapé aparece (fade in). Ao sair dessa área, some (fade out).
+      if (scrollTop + windowHeight >= docHeight - 150) {
+        footer.classList.add('footer-visible');
+      } else {
+        footer.classList.remove('footer-visible');
+      }
+    });
+  </script>
 </body>
 </html>
