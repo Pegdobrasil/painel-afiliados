@@ -1,180 +1,301 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Painel do Afiliado</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
+/* =========================================
+   THEME CONFIGURATION & VARIABLES
+   Paleta inspirada na Peg do Brasil
+   ========================================= */
+:root {
+    /* Cores Principais */
+    --color-primary: #0057B8;       /* Azul Primário */
+    --color-primary-dark: #003F86;  /* Azul Escuro */
+    --color-accent: #003F86;        /* Acento */
+    
+    /* Fundos e Superfícies */
+    --bg-body: #F5F7FA;             /* Cinza Suave */
+    --bg-card: #ffffff;
+    --bg-input: #F8FAFC;
+    
+    /* Textos */
+    --text-main: #2D3748;
+    --text-secondary: #64748B;
+    --text-light: #ffffff;
 
-<body class="bg-gray-100">
-  <div class="max-w-6xl mx-auto p-6">
+    /* Detalhes de UI */
+    --border-radius: 16px;
+    --border-radius-sm: 12px;
+    --border-color: #E2E8F0;
+    --focus-ring: rgba(0, 87, 184, 0.25);
+    
+    /* Sombras Premium (SaaS Style) */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 87, 184, 0.08), 0 4px 6px -2px rgba(0, 87, 184, 0.04);
+    --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Painel do Afiliado</h1>
+    /* Transições */
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-      <div class="flex gap-3">
-        <button onclick="scrollMinhaConta()"
-          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
-          Minha Conta
-        </button>
+/* =========================================
+   DARK MODE (Automático)
+   ========================================= */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-body: #0f172a;
+        --bg-card: #1e293b;
+        --bg-input: #0f172a;
+        --text-main: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+}
 
-        <button onclick="scrollAlterarSenha()"
-          class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
-          Alterar Senha
-        </button>
+/* =========================================
+   GLOBAL RESET & TYPOGRAPHY
+   ========================================= */
+body {
+    background-color: var(--bg-body) !important;
+    color: var(--text-main) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+}
 
-        <button onclick="sair()"
-          class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-          Sair
-        </button>
-      </div>
-    </div>
+/* Container Central */
+.max-w-6xl {
+    max-width: 1200px !important;
+    padding: 40px 24px !important;
+}
 
-    <!-- Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="bg-white shadow rounded p-4">
-        <h2 class="text-lg font-semibold mb-2">Dados</h2>
-        <p><b>Nome:</b> <span id="nome"></span></p>
-        <p><b>Email:</b> <span id="email"></span></p>
-        <p><b>ID Interno:</b> <span id="id"></span></p>
-      </div>
+/* =========================================
+   HEADER & TITLES
+   ========================================= */
+h1 {
+    color: var(--color-primary-dark) !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px;
+    font-size: 2rem !important;
+}
 
-      <div class="bg-white shadow rounded p-4 text-center">
-        <h2 class="text-lg font-semibold">Saldo</h2>
-        <p class="text-2xl font-bold text-green-600" id="saldo">R$ 0,00</p>
-      </div>
+/* Adaptação do título no modo escuro */
+@media (prefers-color-scheme: dark) {
+    h1 { color: #fff !important; }
+}
 
-      <div class="bg-white shadow rounded p-4 text-center">
-        <h2 class="text-lg font-semibold">Pedidos</h2>
-        <p class="text-2xl font-bold text-blue-600" id="pedidos">0</p>
-      </div>
-    </div>
+h2 {
+    color: var(--text-main) !important;
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 20px !important;
+}
 
-    <!-- Gerar link -->
-    <div class="bg-white shadow rounded p-4 mt-6">
-      <h2 class="text-lg font-semibold mb-2">Gerar Link de Afiliado</h2>
-      <input type="text" id="urlProduto" placeholder="Cole a URL do produto"
-        class="w-full border p-2 rounded">
-      <button onclick="gerarLink()"
-        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
-        Gerar
-      </button>
-      <p class="mt-2"><b>Link:</b> <span id="linkAfiliado"></span></p>
-    </div>
+/* =========================================
+   CARDS (Dados, Saldo, Pedidos, Inputs)
+   ========================================= */
+/* Seleciona todas as divs que possuem shadow e rounded do Tailwind */
+div[class*="shadow"] {
+    background-color: var(--bg-card) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 32px !important;
+    transition: var(--transition);
+}
 
-    <!-- Minha conta -->
-    <div id="sec_minhaconta" class="bg-white shadow rounded p-4 mt-6">
-      <h2 class="text-lg font-semibold mb-4">Minha Conta</h2>
+div[class*="shadow"]:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover) !important;
+    border-color: var(--color-primary);
+}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="text-sm text-gray-600">Tipo de Pessoa</label>
-          <select id="conta_tipo_pessoa" class="w-full border rounded p-2">
-            <option value="PF">Pessoa Física (CPF)</option>
-            <option value="PJ">Pessoa Jurídica (CNPJ)</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">CPF / CNPJ</label>
-          <input id="conta_cpf_cnpj" type="text"
-            class="w-full border rounded p-2">
-        </div>
+/* Estilização interna dos textos dos Cards */
+/* Força a cor dos textos dentro dos cards para seguir o tema */
+div[class*="shadow"] p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
 
-        <div>
-          <label class="text-sm text-gray-600">Nome / Razão Social</label>
-          <input id="conta_nome" type="text"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Email</label>
-          <input id="conta_email" type="email"
-            class="w-full border rounded p-2">
-        </div>
+div[class*="shadow"] p b {
+    color: var(--text-main);
+    font-weight: 600;
+}
 
-        <div>
-          <label class="text-sm text-gray-600">Telefone</label>
-          <input id="conta_telefone" type="tel"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">CEP</label>
-          <input id="conta_cep" type="text"
-            class="w-full border rounded p-2">
-        </div>
+/* Destaque para Saldo e Pedidos (Texto Grande) */
+.text-2xl {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px;
+    margin-top: 10px;
+}
 
-        <div class="md:col-span-2">
-          <label class="text-sm text-gray-600">Endereço</label>
-          <input id="conta_endereco" type="text"
-            class="w-full border rounded p-2">
-        </div>
+/* Cores específicas para os números */
+#saldo { color: #10b981 !important; } /* Verde esmeralda moderno */
+#pedidos { color: var(--color-primary) !important; }
 
-        <div>
-          <label class="text-sm text-gray-600">Número</label>
-          <input id="conta_numero" type="text"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Bairro</label>
-          <input id="conta_bairro" type="text"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Cidade</label>
-          <input id="conta_cidade" type="text"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Estado (UF)</label>
-          <input id="conta_estado" maxlength="2"
-            class="w-full border rounded p-2 uppercase">
-        </div>
-      </div>
+/* =========================================
+   BUTTONS (Header & Actions)
+   ========================================= */
+button {
+    border-radius: var(--border-radius-sm) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    padding: 10px 24px !important;
+    transition: var(--transition) !important;
+    border: none !important;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
 
-      <div class="flex justify-end mt-4">
-        <button onclick="salvarMinhaConta()"
-          class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-          Salvar dados
-        </button>
-      </div>
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
 
-      <p id="msg_conta" class="text-xs text-gray-500 mt-2"></p>
-    </div>
+button:active {
+    transform: translateY(0);
+}
 
-    <!-- Alterar Senha -->
-    <div id="sec_alterarsenha" class="bg-white shadow rounded p-4 mt-6 mb-10">
-      <h2 class="text-lg font-semibold mb-4">Alterar Senha</h2>
+/* Normalização dos botões do Header 
+   Sobrescreve as cores inline do Tailwind para a paleta da marca
+*/
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="text-sm text-gray-600">Senha atual</label>
-          <input id="senha_atual" type="password"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Nova senha</label>
-          <input id="senha_nova" type="password"
-            class="w-full border rounded p-2">
-        </div>
-        <div>
-          <label class="text-sm text-gray-600">Confirmar nova senha</label>
-          <input id="senha_nova2" type="password"
-            class="w-full border rounded p-2">
-        </div>
-      </div>
+/* Botão Minha Conta (Originalmente cinza) */
+button[onclick="scrollMinhaConta()"] {
+    background-color: white !important;
+    color: var(--color-primary) !important;
+    border: 2px solid var(--color-primary) !important;
+}
+button[onclick="scrollMinhaConta()"]:hover {
+    background-color: var(--color-primary) !important;
+    color: white !important;
+}
 
-      <div class="flex justify-end mt-4">
-        <button onclick="alterarSenha()"
-          class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-          Alterar senha
-        </button>
-      </div>
+/* Botão Alterar Senha (Originalmente amarelo) */
+button[onclick="scrollAlterarSenha()"] {
+    background-color: var(--color-primary-dark) !important;
+    color: white !important;
+}
+button[onclick="scrollAlterarSenha()"]:hover {
+    background-color: var(--color-primary) !important;
+    box-shadow: 0 0 15px rgba(0, 87, 184, 0.4) !important;
+}
 
-      <p id="msg_senha" class="text-xs text-gray-500 mt-2"></p>
-    </div>
+/* Botão Sair (Originalmente vermelho) */
+button[onclick="sair()"] {
+    background-color: transparent !important;
+    color: #ef4444 !important;
+    border: 1px solid transparent !important;
+}
+button[onclick="sair()"]:hover {
+    background-color: #fee2e2 !important;
+    color: #b91c1c !important;
+}
 
-  </div>
+/* Botões de Ação Principal (Salvar/Gerar) */
+button[onclick="gerarLink()"],
+button[onclick="salvarMinhaConta()"],
+button[onclick="alterarSenha()"] {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    color: white !important;
+    width: auto !important;
+    min-width: 150px;
+}
 
-  <script src="painel.js"></script>
-</body>
-</html>
+button[onclick="gerarLink()"]:hover,
+button[onclick="salvarMinhaConta()"]:hover,
+button[onclick="alterarSenha()"]:hover {
+    opacity: 0.9;
+    box-shadow: 0 8px 20px rgba(0, 87, 184, 0.3) !important;
+}
+
+/* =========================================
+   FORMS (Inputs & Selects)
+   ========================================= */
+label {
+    color: var(--text-main) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 6px !important;
+    display: block;
+}
+
+input, select {
+    background-color: var(--bg-input) !important;
+    border: 2px solid transparent !important; /* Borda transparente para evitar pulo no focus */
+    border-radius: var(--border-radius-sm) !important;
+    padding: 12px 16px !important;
+    color: var(--text-main) !important;
+    font-size: 1rem !important;
+    width: 100%;
+    transition: var(--transition);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Estado de foco premium */
+input:focus, select:focus {
+    background-color: var(--bg-card) !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 4px var(--focus-ring) !important;
+    outline: none !important;
+}
+
+/* Inputs somente leitura ou desabilitados (se houver) */
+input:disabled, input[readonly] {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Campo de Gerar Link - Destaque */
+#urlProduto {
+    font-family: monospace;
+    border: 1px dashed var(--color-primary) !important;
+    background-color: rgba(0, 87, 184, 0.03) !important;
+}
+
+/* Link gerado */
+#linkAfiliado {
+    color: var(--color-primary);
+    font-weight: 700;
+    word-break: break-all;
+}
+
+/* =========================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================= */
+@media (max-width: 768px) {
+    /* Ajuste do header para mobile */
+    .flex.justify-between {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    /* Botões do header em grid no mobile */
+    .flex.gap-3 {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    /* Botão sair ocupa largura total na linha de baixo */
+    button[onclick="sair()"] {
+        grid-column: span 2;
+        border: 1px solid #fee2e2 !important;
+    }
+
+    .max-w-6xl {
+        padding: 20px 16px !important;
+    }
+
+    div[class*="shadow"] {
+        padding: 20px !important;
+    }
+}
