@@ -1,301 +1,216 @@
-/* =========================================
-   THEME CONFIGURATION & VARIABLES
-   Paleta inspirada na Peg do Brasil
-   ========================================= */
-:root {
-    /* Cores Principais */
-    --color-primary: #0057B8;       /* Azul Primário */
-    --color-primary-dark: #003F86;  /* Azul Escuro */
-    --color-accent: #003F86;        /* Acento */
-    
-    /* Fundos e Superfícies */
-    --bg-body: #F5F7FA;             /* Cinza Suave */
-    --bg-card: #ffffff;
-    --bg-input: #F8FAFC;
-    
-    /* Textos */
-    --text-main: #2D3748;
-    --text-secondary: #64748B;
-    --text-light: #ffffff;
-
-    /* Detalhes de UI */
-    --border-radius: 16px;
-    --border-radius-sm: 12px;
-    --border-color: #E2E8F0;
-    --focus-ring: rgba(0, 87, 184, 0.25);
-    
-    /* Sombras Premium (SaaS Style) */
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 87, 184, 0.08), 0 4px 6px -2px rgba(0, 87, 184, 0.04);
-    --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Transições */
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* =========================================
-   DARK MODE (Automático)
-   ========================================= */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-body: #0f172a;
-        --bg-card: #1e293b;
-        --bg-input: #0f172a;
-        --text-main: #f1f5f9;
-        --text-secondary: #94a3b8;
-        --border-color: #334155;
-        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    }
-}
-
-/* =========================================
-   GLOBAL RESET & TYPOGRAPHY
-   ========================================= */
-body {
-    background-color: var(--bg-body) !important;
-    color: var(--text-main) !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-    -webkit-font-smoothing: antialiased;
-    line-height: 1.6;
-}
-
-/* Container Central */
-.max-w-6xl {
-    max-width: 1200px !important;
-    padding: 40px 24px !important;
-}
-
-/* =========================================
-   HEADER & TITLES
-   ========================================= */
-h1 {
-    color: var(--color-primary-dark) !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.5px;
-    font-size: 2rem !important;
-}
-
-/* Adaptação do título no modo escuro */
-@media (prefers-color-scheme: dark) {
-    h1 { color: #fff !important; }
-}
-
-h2 {
-    color: var(--text-main) !important;
-    font-weight: 700 !important;
-    font-size: 1.25rem !important;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
-    margin-bottom: 20px !important;
-}
-
-/* =========================================
-   CARDS (Dados, Saldo, Pedidos, Inputs)
-   ========================================= */
-/* Seleciona todas as divs que possuem shadow e rounded do Tailwind */
-div[class*="shadow"] {
-    background-color: var(--bg-card) !important;
-    border-radius: var(--border-radius) !important;
-    box-shadow: var(--shadow-lg) !important;
-    border: 1px solid var(--border-color) !important;
-    padding: 32px !important;
-    transition: var(--transition);
-}
-
-div[class*="shadow"]:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-hover) !important;
-    border-color: var(--color-primary);
-}
-
-/* Estilização interna dos textos dos Cards */
-/* Força a cor dos textos dentro dos cards para seguir o tema */
-div[class*="shadow"] p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-}
-
-div[class*="shadow"] p b {
-    color: var(--text-main);
-    font-weight: 600;
-}
-
-/* Destaque para Saldo e Pedidos (Texto Grande) */
-.text-2xl {
-    font-size: 2.5rem !important;
-    font-weight: 800 !important;
-    letter-spacing: -1px;
-    margin-top: 10px;
-}
-
-/* Cores específicas para os números */
-#saldo { color: #10b981 !important; } /* Verde esmeralda moderno */
-#pedidos { color: var(--color-primary) !important; }
-
-/* =========================================
-   BUTTONS (Header & Actions)
-   ========================================= */
-button {
-    border-radius: var(--border-radius-sm) !important;
-    font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    padding: 10px 24px !important;
-    transition: var(--transition) !important;
-    border: none !important;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: var(--shadow-sm);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-button:active {
-    transform: translateY(0);
-}
-
-/* Normalização dos botões do Header 
-   Sobrescreve as cores inline do Tailwind para a paleta da marca
+/*
+  Este arquivo CSS deve ser salvo externamente (ex: style-personalizado.css)
+  e linkado no HTML APÓS o script do TailwindCSS para garantir a sobrescrita dos estilos.
+  <link rel="stylesheet" href="style-personalizado.css">
 */
 
-/* Botão Minha Conta (Originalmente cinza) */
-button[onclick="scrollMinhaConta()"] {
-    background-color: white !important;
-    color: var(--color-primary) !important;
-    border: 2px solid var(--color-primary) !important;
-}
-button[onclick="scrollMinhaConta()"]:hover {
-    background-color: var(--color-primary) !important;
-    color: white !important;
+:root {
+  /* Paleta de Cores Peg do Brasil */
+  --primary-blue: #0057B8;
+  --dark-blue: #003F86;
+  --light-blue: #E6F1FF;
+  --soft-gray: #F5F7FA;
+  --text-gray: #505050;
+
+  /* Variáveis de Tema (Modo Claro Padrão) */
+  --bg-page: var(--soft-gray);
+  --bg-card: #ffffff;
+  --text-main: var(--text-gray);
+  --text-heading: var(--dark-blue);
+  --text-label: var(--dark-blue);
+  --border-color: #e2e8f0;
+  --input-bg: #ffffff;
+
+  /* Estilos Premium */
+  --shadow-premium: 0 10px 30px -5px rgba(0, 87, 184, 0.15), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 20px 40px -5px rgba(0, 87, 184, 0.2);
+  --radius-card: 18px;
+  --radius-input: 12px;
+  --radius-button: 12px;
 }
 
-/* Botão Alterar Senha (Originalmente amarelo) */
-button[onclick="scrollAlterarSenha()"] {
-    background-color: var(--color-primary-dark) !important;
-    color: white !important;
-}
-button[onclick="scrollAlterarSenha()"]:hover {
-    background-color: var(--color-primary) !important;
-    box-shadow: 0 0 15px rgba(0, 87, 184, 0.4) !important;
-}
-
-/* Botão Sair (Originalmente vermelho) */
-button[onclick="sair()"] {
-    background-color: transparent !important;
-    color: #ef4444 !important;
-    border: 1px solid transparent !important;
-}
-button[onclick="sair()"]:hover {
-    background-color: #fee2e2 !important;
-    color: #b91c1c !important;
+/* Modo Escuro Automático */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #0f172a; /* Dark Slate background */
+    --bg-card: #1e293b; /* Slate 800 card background */
+    --text-main: #cbd5e1; /* Slate 300 text */
+    --text-heading: #E6F1FF; /* Light blue headings for contrast */
+    --text-label: #94a3b8; /* Slate 400 labels */
+    --border-color: #334155; /* Slate 700 borders */
+    --input-bg: #0f172a;
+    --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+    --shadow-hover: 0 20px 40px -5px rgba(0, 0, 0, 0.6);
+  }
 }
 
-/* Botões de Ação Principal (Salvar/Gerar) */
+/* --- Reset Global e Tipografia --- */
+
+/* Sobrescreve o bg-gray-100 do body */
+body.bg-gray-100 {
+  background-color: var(--bg-page) !important;
+  color: var(--text-main) !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Títulos */
+h1, h2, .font-bold, .font-semibold {
+  color: var(--text-heading) !important;
+  letter-spacing: -0.025em;
+}
+
+/* Labels de formulário */
+label.text-sm.text-gray-600 {
+  color: var(--text-label) !important;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* --- Estilização dos Cards --- */
+
+/* Seleciona todos os containers com estilo de card do Tailwind */
+.bg-white.shadow.rounded.p-4 {
+  background-color: var(--bg-card) !important;
+  box-shadow: var(--shadow-premium) !important;
+  border-radius: var(--radius-card) !important;
+  border: 1px solid var(--border-color);
+  padding: 2rem !important; /* Aumenta o espaçamento interno para visual mais limpo */
+  transition: all 0.3s ease;
+}
+
+/* Efeito de hover suave nos cards */
+.bg-white.shadow.rounded.p-4:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover) !important;
+  border-color: var(--primary-blue);
+}
+
+/* --- Destaques de Texto (Saldo e Pedidos) --- */
+
+/* Reescreve as cores utilitárias do Tailwind para usar a paleta azul */
+#saldo.text-green-600,
+#pedidos.text-blue-600 {
+  color: var(--primary-blue) !important;
+  font-weight: 800;
+  font-size: 2.5rem; /* Aumenta o tamanho da fonte */
+}
+
+/* Ajuste de contraste para modo escuro */
+@media (prefers-color-scheme: dark) {
+  #saldo.text-green-600,
+  #pedidos.text-blue-600 {
+    color: #60a5fa !important; /* Azul mais claro para contraste */
+  }
+}
+
+/* --- Formulários (Inputs e Selects) --- */
+
+input.border,
+select.border {
+  background-color: var(--input-bg) !important;
+  border: 2px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  border-radius: var(--radius-input) !important;
+  padding: 0.875rem 1rem !important; /* Inputs mais altos e confortáveis */
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input.border:focus,
+select.border:focus {
+  outline: none;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 4px var(--light-blue) !important;
+}
+
+/* Estilização customizada do select para remover a seta padrão do navegador e usar uma SVG */
+select.border {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%230057B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 1rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 3rem !important;
+}
+
+/* --- Botões --- */
+
+/* Estilo base para todos os botões */
+button {
+  border-radius: var(--radius-button) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.025em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Efeito de hover e active genérico */
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 87, 184, 0.3), 0 4px 6px -2px rgba(0, 87, 184, 0.1) !important;
+}
+button:active {
+  transform: translateY(0px);
+}
+
+/* Botões do Cabeçalho - Padronizando para a paleta Azul */
+/* Minha Conta (era cinza) */
+button[class*="bg-gray-700"] {
+  background-color: var(--bg-page) !important;
+  color: var(--primary-blue) !important;
+  border: 2px solid var(--primary-blue) !important;
+}
+button[class*="bg-gray-700"]:hover {
+  background-color: var(--primary-blue) !important;
+  color: white !important;
+}
+
+/* Alterar Senha (era amarelo) - Mudando para azul escuro */
+button[class*="bg-yellow-600"] {
+  background-color: var(--dark-blue) !important;
+}
+button[class*="bg-yellow-600"]:hover {
+  background-color: var(--primary-blue) !important;
+}
+
+/* Sair (era vermelho) - Mantém vermelho mas estilo premium */
+button[class*="bg-red-600"] {
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+}
+button[class*="bg-red-600"]:hover {
+    box-shadow: 0 10px 20px rgba(220, 38, 38, 0.4) !important;
+}
+
+/* Botões de Ação (Gerar Link, Salvar, Alterar Senha) */
+/* Padroniza todos os botões de ação principais (azul, verde, azul-escuro) para o Azul Primário */
 button[onclick="gerarLink()"],
 button[onclick="salvarMinhaConta()"],
 button[onclick="alterarSenha()"] {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
-    color: white !important;
-    width: auto !important;
-    min-width: 150px;
+  background-color: var(--primary-blue) !important;
+  padding: 1rem 2rem !important; /* Botões maiores */
+  font-size: 1rem !important;
 }
 
 button[onclick="gerarLink()"]:hover,
 button[onclick="salvarMinhaConta()"]:hover,
 button[onclick="alterarSenha()"]:hover {
-    opacity: 0.9;
-    box-shadow: 0 8px 20px rgba(0, 87, 184, 0.3) !important;
-}
-
-/* =========================================
-   FORMS (Inputs & Selects)
-   ========================================= */
-label {
-    color: var(--text-main) !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-    margin-bottom: 6px !important;
-    display: block;
-}
-
-input, select {
-    background-color: var(--bg-input) !important;
-    border: 2px solid transparent !important; /* Borda transparente para evitar pulo no focus */
-    border-radius: var(--border-radius-sm) !important;
-    padding: 12px 16px !important;
-    color: var(--text-main) !important;
-    font-size: 1rem !important;
-    width: 100%;
-    transition: var(--transition);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-}
-
-/* Estado de foco premium */
-input:focus, select:focus {
-    background-color: var(--bg-card) !important;
-    border-color: var(--color-primary) !important;
-    box-shadow: 0 0 0 4px var(--focus-ring) !important;
-    outline: none !important;
-}
-
-/* Inputs somente leitura ou desabilitados (se houver) */
-input:disabled, input[readonly] {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* Campo de Gerar Link - Destaque */
-#urlProduto {
-    font-family: monospace;
-    border: 1px dashed var(--color-primary) !important;
-    background-color: rgba(0, 87, 184, 0.03) !important;
+  background-color: var(--dark-blue) !important;
 }
 
 /* Link gerado */
 #linkAfiliado {
-    color: var(--color-primary);
-    font-weight: 700;
-    word-break: break-all;
+  color: var(--primary-blue);
+  font-weight: 600;
+  word-break: break-all;
 }
 
-/* =========================================
-   RESPONSIVE ADJUSTMENTS
-   ========================================= */
-@media (max-width: 768px) {
-    /* Ajuste do header para mobile */
-    .flex.justify-between {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
-    }
-    
-    /* Botões do header em grid no mobile */
-    .flex.gap-3 {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-    
-    /* Botão sair ocupa largura total na linha de baixo */
-    button[onclick="sair()"] {
-        grid-column: span 2;
-        border: 1px solid #fee2e2 !important;
-    }
-
-    .max-w-6xl {
-        padding: 20px 16px !important;
-    }
-
-    div[class*="shadow"] {
-        padding: 20px !important;
-    }
+/* Mensagens de erro/sucesso */
+#msg_conta, #msg_senha {
+    font-weight: 600;
+    font-size: 0.875rem;
 }
