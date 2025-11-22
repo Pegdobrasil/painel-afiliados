@@ -21,6 +21,9 @@ function msgSenha(text, tipo = "info") {
     "text-xs mt-2 " + (tipo === "erro" ? "text-red-600" : "text-gray-500");
 }
 
+// ===============================
+// BUSCA PRODUTOS REIN
+// ===============================
 async function buscarProdutosRein(page = 1) {
   const input = document.getElementById("buscaTermo");
   const tbody = document.getElementById("tabelaBuscaProdutos");
@@ -30,7 +33,7 @@ async function buscarProdutosRein(page = 1) {
 
   // estado de carregando
   tbody.innerHTML =
-    '<tr><td colspan="4" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
+    '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
 
   const params = new URLSearchParams();
   if (termo) params.set("termo", termo);
@@ -48,7 +51,7 @@ async function buscarProdutosRein(page = 1) {
 
     if (!items.length) {
       tbody.innerHTML =
-        '<tr><td colspan="4" class="px-3 py-3 text-xs text-slate-400">Nenhum produto encontrado.</td></tr>';
+        '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Nenhum produto encontrado.</td></tr>';
       return;
     }
 
@@ -63,7 +66,7 @@ async function buscarProdutosRein(page = 1) {
       const precoVarejo = Number(p.preco_varejo || 0);
 
       tr.innerHTML = `
-        <td class="px-3 py-2 text-xs">${p.sku}</td>
+        <td class="px-3 py-2 text-xs">${p.sku || ""}</td>
         <td class="px-3 py-2">
           <div class="text-xs font-medium">${p.nome || ""}</div>
           <div class="text-[10px] text-slate-400">
@@ -71,10 +74,9 @@ async function buscarProdutosRein(page = 1) {
         p.ativo ? "Ativo" : "Inativo"
       }
           </div>
-        </td>
-        <td class="px-3 py-2 text-xs">
-          <div>Atacado: R$ ${precoAtacado.toFixed(2)}</div>
-          <div>Varejo: R$ ${precoVarejo.toFixed(2)}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">
+            Atacado: R$ ${precoAtacado.toFixed(2)} • Varejo: R$ ${precoVarejo.toFixed(2)}
+          </div>
         </td>
         <td class="px-3 py-2 text-right">
           <button
@@ -93,50 +95,11 @@ async function buscarProdutosRein(page = 1) {
   } catch (err) {
     console.error(err);
     tbody.innerHTML =
-      '<tr><td colspan="4" class="px-3 py-3 text-xs text-red-400">Erro ao buscar produtos.</td></tr>';
+      '<tr><td colspan="3" class="px-3 py-3 text-xs text-red-400">Erro ao buscar produtos.</td></tr>';
   }
 }
 
-function protegerPainel() {
-  const session = getSession();
-  if (!session) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  if (document.getElementById("nome"))
-    document.getElementById("nome").textContent = session.nome || "";
-  if (document.getElementById("email"))
-    document.getElementById("email").textContent = session.email || "";
-  if (document.getElementById("id"))
-    document.getElementById("id").textContent = session.id || "";
-
-  carregarSaldo(session.id);
-  carregarPedidos(session.id);
-  carregarMinhaConta(session.id);
-
-  // === Buscar Produto (REIN) ===
-  const btnBuscar = document.getElementById("btnBuscarProduto");
-  if (btnBuscar) {
-    btnBuscar.addEventListener("click", function () {
-      buscarProdutosRein(1);
-    });
-  }
-
-  // se a tabela existir, já carrega a primeira página sem termo
-  if (document.getElementById("tabelaBuscaProdutos")) {
-    buscarProdutosRein(1);
-  }
-  const inputBusca = document.getElementById("buscaTermo");
-if (inputBusca) {
-  inputBusca.addEventListener("keyup", function (ev) {
-    if (ev.key === "Enter") {
-      buscarProdutosRein(1);
-    }
-  });
-}
-
-
+// detalhes via REIN
 async function verDetalhesRein(produtoId, botao) {
   if (!produtoId) return;
   const oldText = botao.textContent;
@@ -152,7 +115,6 @@ async function verDetalhesRein(produtoId, botao) {
     }
     const det = data.data || {};
 
-    // Aqui é só visualização. Você pode depois trocar o alert por um modal bonitinho.
     alert(
       `Produto: ${det.Nome || ""}\n` +
         `NCM: ${det.Ncm || ""}\n` +
@@ -167,7 +129,7 @@ async function verDetalhesRein(produtoId, botao) {
   }
 }
 
-// delegação de evento para os botões da tabela
+// delegação de eventos para o botão "Ver detalhes"
 document.addEventListener("click", function (ev) {
   const btn = ev.target.closest(".btn-ver-detalhes");
   if (!btn) return;
@@ -175,6 +137,9 @@ document.addEventListener("click", function (ev) {
   verDetalhesRein(produtoId, btn);
 });
 
+// ===============================
+// API: SALDO E PEDIDOS
+// ===============================
 async function carregarSaldo(id) {
   try {
     const res = await fetch(`${API_BASE}/auth/saldo/${id}`);
@@ -209,7 +174,9 @@ async function carregarPedidos(id) {
   }
 }
 
-// gerar UTM
+// ===============================
+// UTM
+// ===============================
 async function gerarLink() {
   const url = document.getElementById("urlProduto").value.trim();
   const session = getSession();
@@ -233,7 +200,9 @@ async function gerarLink() {
   }
 }
 
-// Minha Conta
+// ===============================
+// MINHA CONTA
+// ===============================
 async function carregarMinhaConta(id) {
   msgConta("Carregando dados...");
   try {
@@ -296,7 +265,6 @@ async function salvarMinhaConta() {
     }
 
     const atualizado = await res.json();
-    // atualiza também na sessão (nome/email)
     localStorage.setItem(
       "painel_afiliado_session",
       JSON.stringify({
@@ -315,7 +283,9 @@ async function salvarMinhaConta() {
   }
 }
 
-// Alterar senha
+// ===============================
+// ALTERAR SENHA
+// ===============================
 async function alterarSenha() {
   const session = getSession();
   if (!session) return;
@@ -357,7 +327,9 @@ async function alterarSenha() {
   }
 }
 
-// navegação
+// ===============================
+// NAVEGAÇÃO E SESSÃO
+// ===============================
 function scrollMinhaConta() {
   const sec = document.getElementById("sec_minhaconta");
   if (sec) sec.scrollIntoView({ behavior: "smooth" });
@@ -371,6 +343,66 @@ function scrollAlterarSenha() {
 function sair() {
   localStorage.removeItem("painel_afiliado_session");
   window.location.href = "index.html";
+}
+
+// carrega o sub-html da busca de produtos
+async function carregarSecaoBuscarProduto() {
+  const wrapper = document.getElementById("sec_buscar_produto_wrapper");
+  if (!wrapper) return;
+
+  try {
+    const res = await fetch("buscar_produto.html");
+    if (!res.ok) {
+      console.error("Erro ao carregar buscar_produto.html");
+      return;
+    }
+    const html = await res.text();
+    wrapper.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+
+  const btnBuscar = document.getElementById("btnBuscarProduto");
+  if (btnBuscar) {
+    btnBuscar.addEventListener("click", function () {
+      buscarProdutosRein(1);
+    });
+  }
+
+  const inputBusca = document.getElementById("buscaTermo");
+  if (inputBusca) {
+    inputBusca.addEventListener("keyup", function (ev) {
+      if (ev.key === "Enter") {
+        buscarProdutosRein(1);
+      }
+    });
+  }
+
+  if (document.getElementById("tabelaBuscaProdutos")) {
+    buscarProdutosRein(1);
+  }
+}
+
+// protege o painel e carrega dados iniciais
+async function protegerPainel() {
+  const session = getSession();
+  if (!session) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  if (document.getElementById("nome"))
+    document.getElementById("nome").textContent = session.nome || "";
+  if (document.getElementById("email"))
+    document.getElementById("email").textContent = session.email || "";
+  if (document.getElementById("id"))
+    document.getElementById("id").textContent = session.id || "";
+
+  await carregarSecaoBuscarProduto();
+  carregarSaldo(session.id);
+  carregarPedidos(session.id);
+  carregarMinhaConta(session.id);
 }
 
 window.addEventListener("DOMContentLoaded", protegerPainel);
