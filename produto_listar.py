@@ -1,36 +1,48 @@
 # -*- coding: utf-8 -*-
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import math
 import requests
 import config
-from produto_imagem import CDN_BASE  # usamos a mesma base do módulo de imagens
 
 EP_LIST = "/api/v1/produto"
 
+# CDN base fixa para montar URL das imagens das grades
+CDN_BASE = "https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/"
+
 
 def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
-    tot = 0.0
-    for l in (locais or []):
+    """
+    Soma EstoqueDisponivel de todos os locais da grade.
+    """
+    total = 0.0
+    for local in locais or []:
         try:
-            tot += float(l.get("EstoqueDisponivel") or 0)
+            total += float(local.get("EstoqueDisponivel") or 0)
         except Exception:
             pass
-    return tot
+    return total
 
 
-def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
+def _precos_por_tabela(grade: Dict[str, Any]) -> Dict[str, float]:
     """
-    Lê ProdutoMargem da grade e devolve um dicionário com:
-    - ATACADO
-    - VAREJO (preço recomendado)
+    Lê ProdutoMargem da grade e retorna:
+      - ATACADO: preço da tabela atacado
+      - VAREJO: preço da tabela varejo (preço recomendado)
     """
     out: Dict[str, float] = {}
 
-    for m in (produto_grade.get("ProdutoMargem") or []):
-        tab = ((m.get("TabelaPreco") or {}).get("Nome") or "").upper()
-        preco = float(m.get("PrecoComDesconto") or m.get("Preco") or 0)
-        if tab and tab not in out:
-            out[tab] = preco
+    for margem in (grade.get("ProdutoMargem") or []):
+        tabela = ((margem.get("TabelaPreco") or {}).get("Nome") or "").upper()
+        preco = margem.get("PrecoComDesconto")
+        if preco is None:
+            preco = margem.get("Preco")
+        try:
+            preco = float(preco or 0)
+        except Exception:
+            continue
+
+        if tabela and tabela not in out:
+            out[tabela] = preco
 
     return {
         "ATACADO": out.get("TABELA ATACADO") or out.get("ATACADO") or 0.0,
@@ -38,72 +50,66 @@ def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
     }
 
 
-def _imagem_capa(produto_grade: Dict[str, Any]) -> Optional[str]:
+def _imagem_capa(grade: Dict[str, Any]) -> str | None:
     """
-    Pega a primeira imagem da grade (pela ordem de exibição)
-    e monta a URL do CDN a partir de ProdutoImagem.NomeImagem.
-
-    Exemplo final:
-    https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/37187.jpg
+    Monta a URL da primeira imagem da grade usando ProdutoImagem.NomeImagem.
     """
-    imagens = produto_grade.get("ProdutoImagem") or []
+    imagens = grade.get("ProdutoImagem") or []
     if not imagens:
         return None
 
-    # ordena pela ordem de exibição (intOrdemExibicao ou OrdemExibicao)
-    def _ord(im):
+    def _ordem(img: Dict[str, Any]) -> int:
         try:
             return int(
-                im.get("intOrdemExibicao")
-                or im.get("OrdemExibicao")
+                img.get("intOrdemExibicao")
+                or img.get("OrdemExibicao")
                 or 0
             )
         except Exception:
             return 0
 
-    imagens = sorted(imagens, key=_ord)
-    img = imagens[0]
+    imagens = sorted(imagens, key=_ordem)
+    img0 = imagens[0]
 
     nome = (
-        img.get("NomeImagem")
-        or img.get("strNomeArquivo")
-        or img.get("NomeArquivo")
+        img0.get("NomeImagem")
+        or img0.get("strNomeArquivo")
+        or img0.get("NomeArquivo")
         or ""
     )
     nome = str(nome).strip().lstrip("/")
     if not nome:
         return None
 
-    # monta a URL completa usando a base do CDN
     return f"{CDN_BASE}{nome}"
 
 
 def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
     """
-    Busca produtos na REIN com paginação por 'page'.
-    Não envia 'limit': o per_page é usado só para calcular total_pages.
-    Retorna: { items, total, page, per_page, total_pages }
+    Consulta a REIN (endpoint de listagem de produtos) usando o termo informado.
+    Retorna os dados crus da API + info de paginação.
     """
     page = max(1, int(page or 1))
     per_page = max(1, int(per_page or 10))
 
     url = f"{config.REIN_BASE}{EP_LIST}"
-    r = requests.get(
+    params = {"page": page, "termo": termo}
+    resp = requests.get(
         url,
         headers=config.rein_headers(EP_LIST),
-        params={"page": page, "termo": termo},
+        params=params,
         timeout=60,
     )
-    r.raise_for_status()
-    data = (r.json() or {}).get("data") or {}
+    resp.raise_for_status()
 
-    items = data.get("items") or []
+    payload = (resp.json() or {}).get("data") or {}
+    items = payload.get("items") or []
 
-    pag = data.get("paginacao") or {}
+    pag = payload.get("paginacao") or {}
     total = (
         pag.get("totalItems")
         or pag.get("total")
-        or data.get("total")
+        or payload.get("total")
         or len(items)
     )
     try:
@@ -129,15 +135,25 @@ def preparar_resultados(
     status: str = "ativos",  # "ativos" | "inativos" | "todos"
 ) -> List[Dict[str, Any]]:
     """
-    Flatteia os itens por grade e aplica filtros.
-    Retorna linhas com:
-    produto_id, grade_id, sku, nome, ncm, estoque, ativo,
-    preco_atacado, preco_varejo, imagem_capa.
+    Converte a resposta da REIN em linhas "achatadas" por grade,
+    no formato esperado pelo painel.
+
+    Cada linha contém:
+      - produto_id
+      - grade_id
+      - sku
+      - nome
+      - ncm
+      - estoque
+      - ativo
+      - preco_atacado
+      - preco_varejo
+      - imagem_capa
     """
     termo = (termo or "").strip()
     linhas: List[Dict[str, Any]] = []
 
-    for p in items:
+    for p in items or []:
         ativo = p.get("DataInativado") in (None, "", "null")
         if status == "ativos" and not ativo:
             continue
