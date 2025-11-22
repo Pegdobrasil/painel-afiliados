@@ -1,0 +1,47 @@
+<!-- buscar_produto.html -->
+<section id="sec_buscar_produto" data-particao="buscar_produto"
+  class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-sm font-semibold text-slate-50">Buscar Produto</h2>
+      <p class="text-[11px] text-slate-500">
+        Ferramenta para procurar itens no catálogo e integrar na sua conta de afiliado.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+    <div class="md:col-span-2">
+      <label class="block text-[11px] text-slate-400 mb-1">Buscar por nome ou código</label>
+      <input
+        id="buscaTermo"
+        type="text"
+        placeholder="Digite parte do nome, SKU ou código interno"
+        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+      />
+    </div>
+
+    <div class="flex items-end">
+      <button
+        id="btnBuscarProduto"
+        class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
+    <table class="min-w-full">
+      <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
+        <tr>
+          <th class="px-3 py-2 text-left">SKU</th>
+          <th class="px-3 py-2 text-left">Produto</th>
+          <th class="px-3 py-2 text-left">Ação</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaBuscaProdutos" class="bg-slate-950/60 divide-y divide-slate-800">
+        <!-- preenchido via painel.js -->
+      </tbody>
+    </table>
+  </div>
+</section>
