@@ -33,7 +33,8 @@ async function buscarProdutosRein(page = 1) {
 
   // estado de carregando
   tbody.innerHTML =
-    '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
+  '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
+
 
   const params = new URLSearchParams();
   if (termo) params.set("termo", termo);
