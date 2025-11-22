@@ -85,11 +85,23 @@ def rein_headers(endpoint_path: str) -> dict:
         "Accept": "application/json"
     }
 
-# Imagem por SKU
-REIN_CDN_VERSION = "6.5.3"
-def rein_image_url(sku: str) -> str:
-    sku = str(sku).strip()
-    return f"https://cdn.rein.net.br/app/core/{REIN_DATABASE}/{REIN_CDN_VERSION}/publico/imagem/produto/{sku}.jpg"
+# Imagem por NomeImagem (ProdutoImagem.NomeImagem)
+REIN_CDN_VERSION = "6.5.4"
+
+def rein_image_url(nome_imagem: str | None) -> str | None:
+    """
+    Recebe exatamente o campo NomeImagem vindo da REIN
+    (ex.: "37187.jpg") e monta a URL do CDN.
+    """
+    if not nome_imagem:
+        return None
+
+    nome_imagem = str(nome_imagem).strip().lstrip("/")  # garante que não terá "//"
+    return (
+        f"https://cdn.rein.net.br/app/core/"
+        f"{REIN_DATABASE}/{REIN_CDN_VERSION}/publico/imagem/produto/{nome_imagem}"
+    )
+
 
 # === Usuários & Uploads ===
 from pathlib import Path
@@ -101,4 +113,5 @@ DIR_UPLOADS.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTS = {"png","jpg","jpeg","webp","gif"}
 def allowed_image(filename: str) -> bool:
     return "." in filename and filename.rsplit(".",1)[1].lower() in ALLOWED_IMAGE_EXTS
+
 
