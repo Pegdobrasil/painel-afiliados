@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import math
 import requests
 import config
 
 EP_LIST = "/api/v1/produto"
+
 
 def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
     tot = 0.0
@@ -15,23 +16,61 @@ def _sum_estoque(locais: List[Dict[str, Any]]) -> float:
             pass
     return tot
 
+
 def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Lê ProdutoMargem da grade e devolve um dicionário com:
+    - ATACADO
+    - VAREJO (preço recomendado)
+    """
     out: Dict[str, float] = {}
+
     for m in (produto_grade.get("ProdutoMargem") or []):
         tab = ((m.get("TabelaPreco") or {}).get("Nome") or "").upper()
-        preco = float(m.get("Preco") or m.get("PrecoComDesconto") or 0)
+        # a REIN costuma mandar PrecoComDesconto
+        preco = float(m.get("PrecoComDesconto") or m.get("Preco") or 0)
         if tab and tab not in out:
             out[tab] = preco
+
     return {
         "ATACADO": out.get("TABELA ATACADO") or out.get("ATACADO") or 0.0,
-        "VAREJO":  out.get("TABELA VAREJO")  or out.get("VAREJO")  or 0.0,
+        "VAREJO": out.get("TABELA VAREJO") or out.get("VAREJO") or 0.0,
     }
+
+
+def _imagem_capa(produto_grade: Dict[str, Any]) -> Optional[str]:
+    """
+    Pega a primeira imagem da grade (pela ordem de exibição)
+    e devolve como data URL (pronta pra usar no <img src="...">).
+    """
+    imagens = produto_grade.get("ProdutoImagem") or []
+    if not imagens:
+        return None
+
+    try:
+        imagens = sorted(
+            imagens,
+            key=lambda im: int(im.get("intOrdemExibicao") or 0),
+        )
+    except Exception:
+        pass
+
+    img = imagens[0]
+    binario = (img.get("BinarioArquivo") or "").strip()
+    tipo = (img.get("strTipoArquivo") or "image/jpeg").strip().lower()
+
+    if not binario:
+        return None
+    if not tipo.startswith("image/"):
+        tipo = "image/jpeg"
+
+    return f"data:{tipo};base64,{binario}"
+
 
 def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
     """
     Busca produtos na REIN com paginação por 'page'.
-    NÃO envia 'limit' (a REIN retornava 400). O 'per_page' é usado só para
-    calcular 'total_pages' com base no 'total' retornado pela API.
+    Não envia 'limit': o per_page é usado só para calcular total_pages.
     Retorna: { items, total, page, per_page, total_pages }
     """
     page = max(1, int(page or 1))
@@ -41,7 +80,7 @@ def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, 
     r = requests.get(
         url,
         headers=config.rein_headers(EP_LIST),
-        params={"page": page, "termo": termo},  # sem 'limit'
+        params={"page": page, "termo": termo},
         timeout=60,
     )
     r.raise_for_status()
@@ -49,7 +88,6 @@ def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, 
 
     items = data.get("items") or []
 
-    # Metadados de paginação comuns que a REIN costuma devolver
     pag = data.get("paginacao") or {}
     total = (
         pag.get("totalItems")
@@ -72,6 +110,7 @@ def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, 
         "total_pages": total_pages,
     }
 
+
 def preparar_resultados(
     items: List[Dict[str, Any]],
     termo: str,
@@ -80,7 +119,9 @@ def preparar_resultados(
 ) -> List[Dict[str, Any]]:
     """
     Flatteia os itens por grade e aplica filtros.
-    Retorna linhas com: produto_id, grade_id, sku, nome, estoque, ativo, preco_atacado, preco_varejo.
+    Retorna linhas com:
+    produto_id, grade_id, sku, nome, ncm, estoque, ativo,
+    preco_atacado, preco_varejo, imagem_capa.
     """
     termo = (termo or "").strip()
     linhas: List[Dict[str, Any]] = []
@@ -99,18 +140,22 @@ def preparar_resultados(
 
             estoque = _sum_estoque(g.get("ProdutoLocal") or [])
             precos = _precos_por_tabela(g)
+            imagem_capa = _imagem_capa(g)
 
-            linhas.append({
-                "produto_id": p.get("Id"),
-                "grade_id": g.get("Id"),
-                "sku": sku,
-                "nome": p.get("Nome") or "",
-                "ncm": p.get("Ncm"),
-                "estoque": estoque,
-                "ativo": bool(ativo),
-                "preco_atacado": precos.get("ATACADO", 0.0),
-                "preco_varejo": precos.get("VAREJO", 0.0),
-            })
+            linhas.append(
+                {
+                    "produto_id": p.get("Id"),
+                    "grade_id": g.get("Id"),
+                    "sku": sku,
+                    "nome": p.get("Nome") or "",
+                    "ncm": p.get("Ncm"),
+                    "estoque": estoque,
+                    "ativo": bool(ativo),
+                    "preco_atacado": precos.get("ATACADO", 0.0),
+                    "preco_varejo": precos.get("VAREJO", 0.0),
+                    "imagem_capa": imagem_capa,
+                }
+            )
 
     # ordena por: ativo desc, estoque desc, sku asc
     linhas.sort(key=lambda x: (-(x["ativo"]), -x["estoque"], x["sku"]))
