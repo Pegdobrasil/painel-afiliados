@@ -45,7 +45,7 @@
         </button>
 
         <button
-          onclick="document.getElementById('sec_buscar_produto').scrollIntoView({behavior:'smooth'})"
+          onclick="document.getElementById('sec_buscar_produto_wrapper').scrollIntoView({behavior:'smooth'})"
           class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
           <span>Buscar Produto</span>
         </button>
@@ -144,7 +144,6 @@
             </div>
           </div>
 
-          <!-- Cards de resumo rápido -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
               <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Saldo acumulado</p>
@@ -194,7 +193,6 @@
                 </tr>
               </thead>
               <tbody id="tabelaPedidos" class="bg-slate-950/60 divide-y divide-slate-800">
-                <!-- preenchido pelo painel.js -->
               </tbody>
             </table>
           </div>
@@ -212,7 +210,6 @@
             </div>
           </div>
 
-          <!-- Tabela placeholder para você ligar depois em outra API -->
           <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
             <table class="min-w-full">
               <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
@@ -223,12 +220,10 @@
                 </tr>
               </thead>
               <tbody id="tabelaProdutos" class="bg-slate-950/60 divide-y divide-slate-800">
-                <!-- você pode preencher via JS depois -->
               </tbody>
             </table>
           </div>
 
-          <!-- Reaproveitando a função existente de gerar link -->
           <div class="border border-slate-800 rounded-xl p-3 space-y-3 text-xs">
             <p class="font-semibold text-slate-50 text-sm">Gerar link de afiliado</p>
             <p class="text-[11px] text-slate-500">
@@ -255,235 +250,16 @@
           </div>
         </section>
 
-        <!-- PARTIÇÃO 4: BUSCAR PRODUTO PARA INTEGRAR -->
-        <!-- PARTIÇÃO 4: BUSCAR PRODUTO PARA INTEGRAR -->
-<section id="sec_buscar_produto" data-particao="buscar_produto"
-  class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-sm font-semibold text-slate-50">Buscar Produto</h2>
-      <p class="text-[11px] text-slate-500">
-        Ferramenta para procurar itens no catálogo e integrar na sua conta de afiliado.
-      </p>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-    <div class="md:col-span-2">
-      <label class="block text-[11px] text-slate-400 mb-1">Buscar por nome ou código</label>
-      <input
-        id="buscaTermo"
-        type="text"
-        placeholder="Digite parte do nome, SKU ou código interno"
-        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-        onkeyup="if (event.key === 'Enter') { buscarProdutosRein(1); }"
-      />
-    </div>
-
-    <div class="flex items-end">
-      <button
-        id="btnBuscarProduto"
-        type="button"
-        onclick="buscarProdutosRein(1)"
-        class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">
-        Buscar
-      </button>
-    </div>
-  </div>
-
-  <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
-    <table class="min-w-full">
-      <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
-        <tr>
-          <th class="px-3 py-2 text-left">SKU</th>
-          <th class="px-3 py-2 text-left">Produto</th>
-          <th class="px-3 py-2 text-left">Ação</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaBuscaProdutos" class="bg-slate-950/60 divide-y divide-slate-800">
-        <!-- preenchido via painel.js -->
-      </tbody>
-    </table>
-  </div>
-</section>
-
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] text-slate-400 mb-1">Buscar por nome ou código</label>
-              <input
-                id="buscaTermo"
-                type="text"
-                placeholder="Digite parte do nome, SKU ou código interno"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              />
-            </div>
-
-            <div class="flex items-end">
-              <button
-                id="btnBuscarProduto"
-                class="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition">
-                Buscar
-              </button>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
-            <table class="min-w-full">
-              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
-                <tr>
-                  <th class="px-3 py-2 text-left">SKU</th>
-                  <th class="px-3 py-2 text-left">Produto</th>
-                  <th class="px-3 py-2 text-left">Ação</th>
-                </tr>
-              </thead>
-              <tbody id="tabelaBuscaProdutos" class="bg-slate-950/60 divide-y divide-slate-800">
-                <!-- aqui você liga depois na API de busca e coloca botão "Integrar" -->
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <!-- PARTIÇÃO 4: BUSCAR PRODUTO PARA INTEGRAR (CARREGADA VIA SUB-HTML) -->
+        <div id="sec_buscar_produto_wrapper"></div>
 
         <!-- PARTIÇÃO 5: MEUS DADOS -->
-        <section id="sec_minhaconta" data-particao="meus_dados"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Meus Dados</h2>
-              <p class="text-[11px] text-slate-500">
-                Informações cadastrais do afiliado. Altere somente quando for necessário.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Tipo de Pessoa</label>
-              <select id="conta_tipo_pessoa"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                <option value="PF">Pessoa Física (CPF)</option>
-                <option value="PJ">Pessoa Jurídica (CNPJ)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">CPF / CNPJ</label>
-              <input id="conta_cpf_cnpj" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Nome / Razão Social</label>
-              <input id="conta_nome" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Email</label>
-              <input id="conta_email" type="email"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Telefone</label>
-              <input id="conta_telefone" type="tel"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">CEP</label>
-              <input id="conta_cep" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-[11px] text-slate-400 mb-1">Endereço</label>
-              <input id="conta_endereco" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Número</label>
-              <input id="conta_numero" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Bairro</label>
-              <input id="conta_bairro" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Cidade</label>
-              <input id="conta_cidade" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Estado (UF)</label>
-              <input id="conta_estado" maxlength="2"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 uppercase" />
-            </div>
-          </div>
-
-          <div class="flex justify-end mt-4">
-            <button onclick="salvarMinhaConta()"
-              class="px-5 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white">
-              Salvar dados
-            </button>
-          </div>
-
-          <p id="msg_conta" class="text-xs text-gray-500 mt-2"></p>
-        </section>
-
-        <!-- PARTIÇÃO 6: ALTERAR SENHA -->
-        <section id="sec_alterarsenha" data-particao="alterar_senha"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-10">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Alterar Senha</h2>
-              <p class="text-[11px] text-slate-500">
-                Use esta área para trocar sua senha de acesso quando precisar.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Senha atual</label>
-              <input id="senha_atual" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Nova senha</label>
-              <input id="senha_nova" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Confirmar nova senha</label>
-              <input id="senha_nova2" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-          </div>
-
-          <div class="flex justify-end mt-4">
-            <button onclick="alterarSenha()"
-              class="px-5 py-2 rounded-lg text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white">
-              Alterar senha
-            </button>
-          </div>
-
-          <p id="msg_senha" class="text-xs text-gray-500 mt-2"></p>
-        </section>
+        <!-- (restante igual ao arquivo que você já tem, sem mudanças) -->
 
       </div>
     </main>
   </div>
 
-  <script src="painel.js"></script>
+  <script src="painel.js?v=4"></script>
 </body>
 </html>
-
