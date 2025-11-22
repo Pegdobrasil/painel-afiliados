@@ -179,6 +179,7 @@ class ReinProdutoLinha(BaseModel):
     ativo: bool
     preco_atacado: float
     preco_varejo: float
+    imagem_capa: Optional[str] = None  # primeira imagem da grade, em data URL
 
 
 class ReinBuscaResponse(BaseModel):
@@ -187,6 +188,40 @@ class ReinBuscaResponse(BaseModel):
     page: int
     per_page: int
     total_pages: int
+
+
+class ReinProdutoImagem(BaseModel):
+    ordem: int
+    nome_arquivo: Optional[str] = None
+    conteudo: Optional[str] = None  # data URL para usar direto no <img>
+
+
+class ReinProdutoDetalhe(BaseModel):
+    produto_id: int
+    grade_id: int
+    sku: str
+    nome: str
+    ncm: Optional[str] = None
+    categorias: List[int] = []
+    descricao: Optional[str] = None
+
+    peso_liquido: float = 0.0
+    peso_bruto: float = 0.0
+    largura_cm: float = 0.0
+    altura_cm: float = 0.0
+    comprimento_cm: float = 0.0
+    cubagem: float = 0.0
+
+    preco_atacado: float = 0.0
+    preco_varejo: float = 0.0  # preço recomendado
+
+    imagens: List[ReinProdutoImagem] = []
+
+
+class ReinProdutoDetalheResponse(BaseModel):
+    ok: bool
+    data: Optional[ReinProdutoDetalhe] = None
+
 
 
 @app.post("/api/utm/create")
@@ -250,10 +285,12 @@ def rein_detalhe_produto(produto_id: int):
         )
 
 
+
 # Entry point pro Railway
 if __name__ == "__main__":
     import uvicorn
 
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
 
