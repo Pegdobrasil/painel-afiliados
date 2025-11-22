@@ -26,20 +26,18 @@ function msgSenha(text, tipo = "info") {
 // ===============================
 async function buscarProdutosRein(page = 1) {
   const input = document.getElementById("buscaTermo");
-  const tbody = document.getElementById("tabelaBuscaProdutos");
-  if (!tbody) return;
+  const container = document.getElementById("listaBuscaProdutos");
+  if (!container) return;
 
   const termo = (input?.value || "").trim();
 
-  // estado de carregando
-  tbody.innerHTML =
-  '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Buscando produtos...</td></tr>';
-
+  container.innerHTML =
+    '<div class="col-span-full px-3 py-3 text-xs text-slate-400">Buscando produtos...</div>';
 
   const params = new URLSearchParams();
   if (termo) params.set("termo", termo);
   params.set("page", String(page));
-  params.set("per_page", "10");
+  params.set("per_page", "9");
 
   try {
     const res = await fetch(
@@ -51,54 +49,218 @@ async function buscarProdutosRein(page = 1) {
     const items = data.items || [];
 
     if (!items.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="3" class="px-3 py-3 text-xs text-slate-400">Nenhum produto encontrado.</td></tr>';
+      container.innerHTML =
+        '<div class="col-span-full px-3 py-3 text-xs text-slate-400">Nenhum produto encontrado.</div>';
       return;
     }
 
-    tbody.innerHTML = "";
+    container.innerHTML = "";
 
     for (const p of items) {
-      const tr = document.createElement("tr");
-      tr.className = "border-b border-slate-800";
-
-      const estoque = p.estoque ?? 0;
+      const estoque = Number(p.estoque ?? 0);
       const precoAtacado = Number(p.preco_atacado || 0);
       const precoVarejo = Number(p.preco_varejo || 0);
+      const capa = p.imagem_capa || "";
 
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs">${p.sku || ""}</td>
-        <td class="px-3 py-2">
-          <div class="text-xs font-medium">${p.nome || ""}</div>
-          <div class="text-[10px] text-slate-400">
-            NCM: ${p.ncm || "-"} • Estoque: ${estoque} • ${
-        p.ativo ? "Ativo" : "Inativo"
-      }
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className =
+        "card-produto w-full text-left bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-sky-500/70 hover:shadow-lg transition cursor-pointer";
+      card.setAttribute("data-produto-id", p.produto_id);
+
+      card.innerHTML = `
+        <div class="relative aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
+          ${
+            capa
+              ? `<img src="${capa}" alt="${(p.nome || "")
+                  .replace(/"/g, "&quot;")}" class="w-full h-full object-cover" />`
+              : `<div class="text-[11px] text-slate-500">Sem imagem</div>`
+          }
+        </div>
+        <div class="p-3 flex-1 flex flex-col gap-1">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] text-slate-400">SKU: ${p.sku}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full border ${
+              p.ativo
+                ? "border-emerald-500/60 text-emerald-300 bg-emerald-500/5"
+                : "border-slate-600 text-slate-300 bg-slate-800/60"
+            }">
+              ${p.ativo ? "Ativo" : "Inativo"}
+            </span>
           </div>
-          <div class="text-[10px] text-slate-400 mt-0.5">
-            Atacado: R$ ${precoAtacado.toFixed(2)} • Varejo: R$ ${precoVarejo.toFixed(2)}
+          <div class="text-xs font-semibold text-slate-50 line-clamp-2">
+            ${p.nome || ""}
           </div>
-        </td>
-        <td class="px-3 py-2 text-right">
-          <button
-            type="button"
-            class="btn-ver-detalhes inline-flex items-center px-3 py-1 rounded text-[11px] bg-sky-600 text-white hover:bg-sky-500"
-            data-produto-id="${p.produto_id}"
-            data-grade-id="${p.grade_id}"
-          >
-            Ver detalhes
-          </button>
-        </td>
+          <div class="text-[11px] text-slate-400 mt-1">
+            Estoque: ${estoque}
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <div class="text-[10px] text-slate-500">Atacado</div>
+              <div class="font-semibold text-emerald-400">
+                R$ ${precoAtacado.toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">Varejo recomendado</div>
+              <div class="font-semibold text-sky-400">
+                R$ ${precoVarejo.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </div>
       `;
 
-      tbody.appendChild(tr);
+      card.addEventListener("click", () => {
+        abrirModalProduto(p.produto_id);
+      });
+
+      container.appendChild(card);
     }
   } catch (err) {
     console.error(err);
-    tbody.innerHTML =
-      '<tr><td colspan="3" class="px-3 py-3 text-xs text-red-400">Erro ao buscar produtos.</td></tr>';
+    container.innerHTML =
+      '<div class="col-span-full px-3 py-3 text-xs text-red-500">Erro ao buscar produtos.</div>';
   }
 }
+function fecharModalProduto() {
+  const modal = document.getElementById("modalProduto");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+async function abrirModalProduto(produtoId) {
+  const modal = document.getElementById("modalProduto");
+  if (!modal) return;
+
+  const titulo = document.getElementById("modalProdutoTitulo");
+  const skuEl = document.getElementById("modalProdutoSku");
+  const catEl = document.getElementById("modalProdutoCategoria");
+  const descEl = document.getElementById("modalProdutoDescricao");
+  const pesoEl = document.getElementById("modalProdutoPeso");
+  const dimEl = document.getElementById("modalProdutoDimensoes");
+  const precoAEl = document.getElementById("modalProdutoPrecoAtacado");
+  const precoVEl = document.getElementById("modalProdutoPrecoVarejo");
+  const imagensEl = document.getElementById("modalProdutoImagens");
+  const thumbsEl = document.getElementById("modalProdutoThumbs");
+
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  titulo.textContent = "Carregando...";
+  skuEl.textContent = "";
+  catEl.textContent = "-";
+  descEl.textContent = "";
+  pesoEl.textContent = "-";
+  dimEl.textContent = "-";
+  precoAEl.textContent = "R$ 0,00";
+  precoVEl.textContent = "R$ 0,00";
+  imagensEl.innerHTML =
+    '<div class="text-[11px] text-slate-400">Carregando imagens...</div>';
+  thumbsEl.innerHTML = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/rein/produto/${produtoId}`);
+    if (!res.ok) throw new Error("Erro HTTP no detalhe");
+
+    const payload = await res.json();
+    if (!payload.ok || !payload.data) throw new Error("Detalhe vazio");
+
+    const det = payload.data;
+
+    titulo.textContent = det.nome || "Produto";
+    skuEl.textContent = `SKU: ${det.sku} • NCM: ${det.ncm || "-"}`;
+    catEl.textContent = det.categorias && det.categorias.length
+      ? `IDs: ${det.categorias.join(" > ")}`
+      : "-";
+    descEl.textContent = det.descricao || "Sem descrição cadastrada.";
+
+    pesoEl.textContent = `Líquido: ${det.peso_liquido.toFixed(
+      3
+    )} kg • Bruto: ${det.peso_bruto.toFixed(3)} kg`;
+    dimEl.textContent = `${det.largura_cm.toFixed(
+      1
+    )} x ${det.altura_cm.toFixed(1)} x ${det.comprimento_cm.toFixed(
+      1
+    )} cm (Cubagem: ${det.cubagem.toFixed(4)})`;
+
+    precoAEl.textContent = `R$ ${Number(det.preco_atacado || 0).toFixed(2)}`;
+    precoVEl.textContent = `R$ ${Number(det.preco_varejo || 0).toFixed(2)}`;
+
+    // imagens
+    const imagens = det.imagens || [];
+    if (!imagens.length) {
+      imagensEl.innerHTML =
+        '<div class="text-[11px] text-slate-400">Sem imagens cadastradas.</div>';
+      return;
+    }
+
+    function renderImagemPrincipal(src) {
+      imagensEl.innerHTML = `
+        <img src="${src}" alt="${(det.nome || "")
+        .replace(/"/g, "&quot;")}" class="w-full h-full object-contain" />
+      `;
+    }
+
+    renderImagemPrincipal(imagens[0].conteudo);
+
+    thumbsEl.innerHTML = "";
+    for (const img of imagens) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className =
+        "border border-slate-700 rounded-md overflow-hidden w-16 h-16 flex-shrink-0 hover:border-sky-500";
+      btn.innerHTML = `<img src="${img.conteudo}" class="w-full h-full object-cover" />`;
+      btn.addEventListener("click", () => renderImagemPrincipal(img.conteudo));
+      thumbsEl.appendChild(btn);
+    }
+  } catch (err) {
+    console.error(err);
+    titulo.textContent = "Erro ao carregar detalhes";
+    imagensEl.innerHTML =
+      '<div class="text-[11px] text-red-500">Não foi possível carregar o produto.</div>';
+  }
+}
+
+// eventos de fechar modal
+document.addEventListener("click", (ev) => {
+  const closeBtn = ev.target.closest("#modalProdutoFechar");
+  if (closeBtn) {
+    fecharModalProduto();
+  }
+
+  const modal = document.getElementById("modalProduto");
+  if (!modal || modal.classList.contains("hidden")) return;
+
+  if (ev.target === modal) {
+    fecharModalProduto();
+  }
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") {
+    fecharModalProduto();
+  }
+});
+document.addEventListener("DOMContentLoaded", () => {
+  const btnBuscar = document.getElementById("btnBuscarProduto");
+  const inputBuscar = document.getElementById("buscaTermo");
+
+  if (btnBuscar) {
+    btnBuscar.addEventListener("click", () => buscarProdutosRein(1));
+  }
+  if (inputBuscar) {
+    inputBuscar.addEventListener("keyup", (ev) => {
+      if (ev.key === "Enter") {
+        buscarProdutosRein(1);
+      }
+    });
+  }
+
+  // pode disparar uma busca inicial vazia se quiser
+  // buscarProdutosRein(1);
+});
 
 // detalhes via REIN
 async function verDetalhesRein(produtoId, botao) {
