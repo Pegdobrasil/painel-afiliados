@@ -2,401 +2,137 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Painel do Afiliado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – Painel Afiliados</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animated-bg {
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
 </head>
 
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-  <div class="min-h-screen flex">
+<body class="animated-bg flex items-center justify-center min-h-screen p-4">
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-      <div class="px-6 py-5 flex items-center gap-3 border-b border-slate-800">
-        <div class="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-sky-500 flex items-center justify-center text-sm font-bold">
-          AF
-        </div>
-        <div>
-          <p class="text-xs text-slate-400">Painel Afiliados</p>
-          <p class="text-sm font-semibold text-slate-50 truncate" id="nome">Carregando...</p>
+  <div class="fade-in-up bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-8 w-full max-w-md border border-white/20 relative overflow-hidden">
+    
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4 shadow-sm">
+        <i data-lucide="user" class="w-6 h-6"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Bem-vindo de volta</h1>
+      <p class="text-gray-500 text-sm mt-2">Acesse o Painel de Afiliados</p>
+    </div>
+
+    <div class="space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Email</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i data-lucide="mail" class="w-5 h-5"></i>
+          </div>
+          <input 
+            id="email" 
+            type="email" 
+            placeholder="seu@email.com"
+            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+          >
         </div>
       </div>
 
-      <nav class="flex-1 px-3 py-4 space-y-1 text-sm">
-        <div class="text-[11px] font-semibold text-slate-500 px-3 uppercase tracking-wide mb-1">
-          Navegação
+      <div>
+        <div class="flex items-center justify-between mb-1.5 ml-1">
+          <label class="block text-sm font-medium text-gray-700">Senha</label>
+          <button type="button" onclick="recuperarConta()" class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            Esqueceu a senha?
+          </button>
         </div>
-
-        <button
-          onclick="document.getElementById('sec_status_integracao').scrollIntoView({behavior:'smooth'})"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 text-slate-50 text-sm font-medium">
-          <span>Status de Integração</span>
-        </button>
-
-        <button
-          onclick="document.getElementById('sec_pedidos').scrollIntoView({behavior:'smooth'})"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-          <span>Pedidos</span>
-        </button>
-
-        <button
-          onclick="document.getElementById('sec_produtos').scrollIntoView({behavior:'smooth'})"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-          <span>Produtos Cadastrados</span>
-        </button>
-
-        <button
-          onclick="document.getElementById('sec_buscar_produto').scrollIntoView({behavior:'smooth'})"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-          <span>Buscar Produto</span>
-        </button>
-
-        <button
-          onclick="scrollMinhaConta()"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-          <span>Meus Dados</span>
-        </button>
-
-        <button
-          onclick="scrollAlterarSenha()"
-          class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300">
-          <span>Alterar Senha</span>
-        </button>
-      </nav>
-
-      <div class="px-4 py-4 border-t border-slate-800 text-xs">
-        <p class="text-[11px] text-slate-500 mb-1">Login</p>
-        <p class="text-[11px] text-slate-300 truncate" id="email">...</p>
-        <p class="text-[11px] text-slate-500 mt-1">
-          ID interno: <span id="id">...</span>
-        </p>
-
-        <button onclick="sair()"
-          class="mt-4 w-full text-xs font-medium text-red-400 border border-red-500/60 rounded-lg px-3 py-2 hover:bg-red-500/10">
-          Sair do painel
-        </button>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="flex-1 min-w-0">
-      <!-- HEADER -->
-      <header class="flex items-center justify-between px-8 py-5 border-b border-slate-800">
-        <div>
-          <h1 class="text-xl font-semibold text-slate-50">Dashboard do Afiliado</h1>
-          <p class="text-xs text-slate-400 mt-1">
-            Acompanhe vendas, produtos integrados e status das suas conexões em um só lugar.
-          </p>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+          </div>
+          <input 
+            id="senha" 
+            type="password" 
+            placeholder="••••••••"
+            class="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+          >
+          <button 
+            type="button"
+            onclick="togglePassword()"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+          >
+            <i id="eye-icon" data-lucide="eye" class="w-5 h-5"></i>
+          </button>
         </div>
-      </header>
-
-      <div class="px-8 py-6 space-y-6">
-
-        <!-- PARTIÇÃO 1: STATUS DE INTEGRAÇÃO -->
-        <section id="sec_status_integracao" data-particao="status_integracao"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Status de Integração</h2>
-              <p class="text-[11px] text-slate-500">
-                Visual de saúde das integrações. Aqui você consegue ver rapidamente se está tudo ativo.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-100">Hubai</span>
-                <span id="status_hubai"
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-emerald-600/20 text-emerald-300 border border-emerald-600/40">
-                  Ativo
-                </span>
-              </div>
-              <p class="text-[11px] text-slate-400">
-                Integração principal para automação de anúncios.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-100">Magazord</span>
-                <span id="status_magazord"
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-slate-700 text-slate-200 border border-slate-600">
-                  Em análise
-                </span>
-              </div>
-              <p class="text-[11px] text-slate-400">
-                ERP e pedidos centralizados. Campo visual para você controlar.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-1">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-100">Outras conexões</span>
-                <span id="status_outros"
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-red-600/10 text-red-300 border border-red-600/50">
-                  Não configurado
-                </span>
-              </div>
-              <p class="text-[11px] text-slate-400">
-                Espaço para futuras integrações (Shopee, Mercado Livre, etc.).
-              </p>
-            </div>
-          </div>
-
-          <!-- Cards de resumo rápido -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-              <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Saldo acumulado</p>
-              <p class="text-3xl font-bold text-emerald-400 mt-1" id="saldo">R$ 0,00</p>
-              <p class="text-[11px] text-slate-500 mt-2">
-                Valor aproximado das vendas aprovadas.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-              <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Pedidos</p>
-              <p class="text-3xl font-bold text-sky-400 mt-1" id="pedidos">0</p>
-              <p class="text-[11px] text-slate-500 mt-2">
-                Total de pedidos vinculados ao seu ID de afiliado.
-              </p>
-            </div>
-
-            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-              <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Produtos integrados</p>
-              <p class="text-3xl font-bold text-violet-400 mt-1" id="itensIntegrados">0</p>
-              <p class="text-[11px] text-slate-500 mt-2">
-                Quantidade de itens cadastrados na sua conta (campo visual, pode ligar na API depois).
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <!-- PARTIÇÃO 2: PEDIDOS -->
-        <section id="sec_pedidos" data-particao="pedidos"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Pedidos</h2>
-              <p class="text-[11px] text-slate-500">
-                Listagem básica dos pedidos para consulta. Os dados vêm da API, mas ficam somente em modo leitura.
-              </p>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
-            <table class="min-w-full">
-              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
-                <tr>
-                  <th class="px-3 py-2 text-left">Código</th>
-                  <th class="px-3 py-2 text-left">Valor</th>
-                  <th class="px-3 py-2 text-left">Data criação</th>
-                </tr>
-              </thead>
-              <tbody id="tabelaPedidos" class="bg-slate-950/60 divide-y divide-slate-800">
-                <!-- preenchido pelo painel.js -->
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- PARTIÇÃO 3: PRODUTOS CADASTRADOS -->
-        <section id="sec_produtos" data-particao="produtos"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Produtos Cadastrados</h2>
-              <p class="text-[11px] text-slate-500">
-                Espaço para listar os produtos que já estão integrados na conta do afiliado.
-              </p>
-            </div>
-          </div>
-
-          <!-- Tabela placeholder -->
-          <div class="overflow-x-auto rounded-xl border border-slate-800/60 text-xs">
-            <table class="min-w-full">
-              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
-                <tr>
-                  <th class="px-3 py-2 text-left">SKU</th>
-                  <th class="px-3 py-2 text-left">Nome do produto</th>
-                  <th class="px-3 py-2 text-left">Situação</th>
-                </tr>
-              </thead>
-              <tbody id="tabelaProdutos" class="bg-slate-950/60 divide-y divide-slate-800">
-                <!-- preencher via JS depois -->
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Gerar link -->
-          <div class="border border-slate-800 rounded-xl p-3 space-y-3 text-xs">
-            <p class="font-semibold text-slate-50 text-sm">Gerar link de afiliado</p>
-            <p class="text-[11px] text-slate-500">
-              Cole a URL de um produto para gerar um link rastreado com seu ID.
-            </p>
-
-            <input
-              type="text"
-              id="urlProduto"
-              placeholder="Cole aqui a URL do produto"
-              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            />
-
-            <button
-              onclick="gerarLink()"
-              class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white transition">
-              Gerar link
-            </button>
-
-            <div class="text-[11px] text-slate-400">
-              <span class="font-semibold text-slate-300">Link gerado:</span>
-              <span id="linkAfiliado" class="break-all ml-1"></span>
-            </div>
-          </div>
-        </section>
-
-        <!-- PARTIÇÃO 4: BUSCAR PRODUTO PARA INTEGRAR (CARREGADA VIA SUB-HTML) -->
-        <div id="sec_buscar_produto_wrapper"></div>
-
-        <!-- PARTIÇÃO 5: MEUS DADOS -->
-        <section id="sec_minhaconta" data-particao="meus_dados"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Meus Dados</h2>
-              <p class="text-[11px] text-slate-500">
-                Informações cadastrais do afiliado. Altere somente quando for necessário.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Tipo de Pessoa</label>
-              <select id="conta_tipo_pessoa"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-                <option value="PF">Pessoa Física (CPF)</option>
-                <option value="PJ">Pessoa Jurídica (CNPJ)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">CPF / CNPJ</label>
-              <input id="conta_cpf_cnpj" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Nome / Razão Social</label>
-              <input id="conta_nome" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Email</label>
-              <input id="conta_email" type="email"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Telefone</label>
-              <input id="conta_telefone" type="tel"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">CEP</label>
-              <input id="conta_cep" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-[11px] text-slate-400 mb-1">Endereço</label>
-              <input id="conta_endereco" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Número</label>
-              <input id="conta_numero" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Bairro</label>
-              <input id="conta_bairro" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Cidade</label>
-              <input id="conta_cidade" type="text"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Estado (UF)</label>
-              <input id="conta_estado" maxlength="2"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 uppercase" />
-            </div>
-          </div>
-
-          <div class="flex justify-end mt-4">
-            <button onclick="salvarMinhaConta()"
-              class="px-5 py-2 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white">
-              Salvar dados
-            </button>
-          </div>
-
-          <p id="msg_conta" class="text-xs text-gray-500 mt-2"></p>
-        </section>
-
-        <!-- PARTIÇÃO 6: ALTERAR SENHA -->
-        <section id="sec_alterarsenha" data-particao="alterar_senha"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-10">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-sm font-semibold text-slate-50">Alterar Senha</h2>
-              <p class="text-[11px] text-slate-500">
-                Use esta área para trocar sua senha de acesso quando precisar.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Senha atual</label>
-              <input id="senha_atual" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Nova senha</label>
-              <input id="senha_nova" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Confirmar nova senha</label>
-              <input id="senha_nova2" type="password"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" />
-            </div>
-          </div>
-
-          <div class="flex justify-end mt-4">
-            <button onclick="alterarSenha()"
-              class="px-5 py-2 rounded-lg text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white">
-              Alterar senha
-            </button>
-          </div>
-
-          <p id="msg_senha" class="text-xs text-gray-500 mt-2"></p>
-        </section>
-
       </div>
-    </main>
+
+      <!-- Agora o botão chama DIRETO o login() do auth.js -->
+      <button 
+        type="button"
+        onclick="login()"
+        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]"
+      >
+        Entrar
+      </button>
+    </div>
+
+    <div class="mt-8 text-center">
+      <p class="text-sm text-gray-500">
+        Ainda não tem acesso?
+        <a href="cadastro.html" class="text-blue-600 font-semibold hover:text-blue-700 transition-colors ml-1">Cadastre-se</a>
+      </p>
+    </div>
+    
+    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-xl pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-pink-50 rounded-full opacity-50 blur-xl pointer-events-none"></div>
+
   </div>
 
-  <script src="painel.js"></script>
+  <!-- carrega seu auth.js REAL -->
+  <script src="auth.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    function togglePassword() {
+      const senhaInput = document.getElementById('senha');
+      const eyeIcon = document.getElementById('eye-icon');
+      
+      if (senhaInput.type === 'password') {
+        senhaInput.type = 'text';
+        eyeIcon.style.opacity = '1';
+        eyeIcon.style.color = '#2563eb';
+      } else {
+        senhaInput.type = 'password';
+        eyeIcon.style.opacity = '';
+        eyeIcon.style.color = '';
+      }
+    }
+  </script>
 </body>
 </html>
