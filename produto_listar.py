@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 import math
 import requests
 import config
+from produto_imagem import CDN_BASE  # usamos a mesma base do módulo de imagens
 
 EP_LIST = "/api/v1/produto"
 
@@ -27,7 +28,6 @@ def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
 
     for m in (produto_grade.get("ProdutoMargem") or []):
         tab = ((m.get("TabelaPreco") or {}).get("Nome") or "").upper()
-        # a REIN costuma mandar PrecoComDesconto
         preco = float(m.get("PrecoComDesconto") or m.get("Preco") or 0)
         if tab and tab not in out:
             out[tab] = preco
@@ -41,30 +41,41 @@ def _precos_por_tabela(produto_grade: Dict[str, Any]) -> Dict[str, float]:
 def _imagem_capa(produto_grade: Dict[str, Any]) -> Optional[str]:
     """
     Pega a primeira imagem da grade (pela ordem de exibição)
-    e devolve como data URL (pronta pra usar no <img src="...">).
+    e monta a URL do CDN a partir de ProdutoImagem.NomeImagem.
+
+    Exemplo final:
+    https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/37187.jpg
     """
     imagens = produto_grade.get("ProdutoImagem") or []
     if not imagens:
         return None
 
-    try:
-        imagens = sorted(
-            imagens,
-            key=lambda im: int(im.get("intOrdemExibicao") or 0),
-        )
-    except Exception:
-        pass
+    # ordena pela ordem de exibição (intOrdemExibicao ou OrdemExibicao)
+    def _ord(im):
+        try:
+            return int(
+                im.get("intOrdemExibicao")
+                or im.get("OrdemExibicao")
+                or 0
+            )
+        except Exception:
+            return 0
 
+    imagens = sorted(imagens, key=_ord)
     img = imagens[0]
-    binario = (img.get("BinarioArquivo") or "").strip()
-    tipo = (img.get("strTipoArquivo") or "image/jpeg").strip().lower()
 
-    if not binario:
+    nome = (
+        img.get("NomeImagem")
+        or img.get("strNomeArquivo")
+        or img.get("NomeArquivo")
+        or ""
+    )
+    nome = str(nome).strip().lstrip("/")
+    if not nome:
         return None
-    if not tipo.startswith("image/"):
-        tipo = "image/jpeg"
 
-    return f"data:{tipo};base64,{binario}"
+    # monta a URL completa usando a base do CDN
+    return f"{CDN_BASE}{nome}"
 
 
 def listar_produtos(termo: str, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
