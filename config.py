@@ -98,8 +98,7 @@ def rein_image_url(nome_imagem: str | None) -> str | None:
 
     nome_imagem = str(nome_imagem).strip().lstrip("/")  # garante que não terá "//"
     return (
-        f"https://cdn.rein.net.br/app/core/"
-        f"{REIN_DATABASE}/{REIN_CDN_VERSION}/publico/imagem/produto/{nome_imagem}"
+        f"https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/{nome_imagem}"
     )
 
 
@@ -113,5 +112,6 @@ DIR_UPLOADS.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTS = {"png","jpg","jpeg","webp","gif"}
 def allowed_image(filename: str) -> bool:
     return "." in filename and filename.rsplit(".",1)[1].lower() in ALLOWED_IMAGE_EXTS
+
 
 
