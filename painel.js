@@ -123,45 +123,55 @@ async function buscarProdutosRein(page = 1) {
       '<div class="col-span-full px-3 py-3 text-xs text-red-500">Erro ao buscar produtos.</div>';
   }
 }
+
 // Normaliza o detalhe vindo da API da REIN (produto cru) para o formato usado no modal
 function normalizarDetalheRein(raw) {
   if (!raw) return null;
 
+  // Algumas rotas podem devolver { status, data: { ... } }.
+  // Neste caso, usamos sempre o conteúdo de "data".
+  const data =
+    raw && raw.data && (raw.data.ProdutoGrade || raw.data.ProdutoDescricao)
+      ? raw.data
+      : raw;
+
   // Se já vier no formato esperado (nome + imagens), só retorna
-  if (raw.nome && Array.isArray(raw.imagens)) {
-    return raw;
+  if (data.nome && Array.isArray(data.imagens)) {
+    return data;
   }
 
   const det = {};
-  det.nome = raw.Nome || raw.nome || "";
-  det.descricao = raw.Descricao || raw.descricao || "";
+
+  // nome, descrição e NCM
+  det.nome = data.Nome || data.nome || "";
+  det.descricao = data.Descricao || data.descricao || "";
 
   // pega a primeira grade do produto (padrão)
-  const grades = raw.ProdutoGrade || raw.produtoGrade || [];
+  const grades = data.ProdutoGrade || data.produtoGrade || [];
   const grade = grades[0] || {};
 
   det.sku = grade.Sku || grade.sku || "";
-  det.ncm = grade.Ncm || raw.Ncm || raw.ncm || "";
+  det.ncm = grade.Ncm || data.Ncm || data.ncm || "";
 
   // pesos
   const pesoLiq = Number(
-    grade.PesoLiquido ?? raw.PesoLiquido ?? raw.peso_liquido ?? 0
+    grade.PesoLiquido ?? data.PesoLiquido ?? data.peso_liquido ?? 0
   );
   const pesoBru = Number(
-    grade.PesoBruto ?? raw.PesoBruto ?? raw.peso_bruto ?? pesoLiq
+    grade.PesoBruto ?? data.PesoBruto ?? data.peso_bruto ?? pesoLiq
   );
   det.peso_liquido = Number.isFinite(pesoLiq) ? pesoLiq : 0;
   det.peso_bruto = Number.isFinite(pesoBru) ? pesoBru : det.peso_liquido;
 
   // dimensões (em cm)
   const largura = Number(
-    grade.Largura ?? raw.Largura ?? raw.largura_cm ?? 0
+    grade.Largura ?? data.Largura ?? data.largura_cm ?? 0
   );
   const altura = Number(
-    grade.Altura ?? raw.Altura ?? raw.altura_cm ?? 0
+    grade.Altura ?? data.Altura ?? data.altura_cm ?? 0
   );
   const comp = Number(
-    grade.Comprimento ?? raw.Comprimento ?? raw.comprimento_cm ?? 0
+    grade.Comprimento ?? data.Comprimento ?? data.comprimento_cm ?? 0
   );
 
   det.largura_cm = Number.isFinite(largura) ? largura : 0;
@@ -202,11 +212,19 @@ function normalizarDetalheRein(raw) {
   }
   det.imagens = imagens;
 
-  // categorias (se quiser usar depois)
-  det.categorias = [];
+  // categorias em texto (para exibir no modal)
+  const categorias = [];
+  for (const pc of data.ProdutoCategoria || []) {
+    const cat = pc.Categoria || {};
+    const pai = cat.CategoriaPai || {};
+    if (pai.Nome && cat.Nome) categorias.push(`${pai.Nome} > ${cat.Nome}`);
+    else if (cat.Nome) categorias.push(cat.Nome);
+  }
+  det.categorias = categorias;
 
   return det;
 }
+
 function fecharModalProduto() {
   const modal = document.getElementById("modalProduto");
   if (!modal) return;
@@ -250,7 +268,7 @@ async function abrirModalProduto(produtoId) {
 
     const payload = await res.json();
 
-    // aceita tanto { ok, data } quanto objeto cru da REIN
+    // aceita tanto { ok, data } quanto objeto cru da REIN ou {status, data}
     let det = null;
     if (payload && payload.ok && payload.data) {
       det = payload.data;
@@ -264,9 +282,9 @@ async function abrirModalProduto(produtoId) {
     titulo.textContent = det.nome || "Produto";
     skuEl.textContent = `SKU: ${det.sku || "-"} • NCM: ${det.ncm || "-"}`;
 
-    // CATEGORIA (se vier algo em det.categorias)
+    // CATEGORIA
     if (Array.isArray(det.categorias) && det.categorias.length) {
-      catEl.textContent = `IDs: ${det.categorias.join(" > ")}`;
+      catEl.textContent = det.categorias.join(" | ");
     } else {
       catEl.textContent = "-";
     }
@@ -370,6 +388,7 @@ document.addEventListener("keydown", (ev) => {
     fecharModalProduto();
   }
 });
+
 document.addEventListener("DOMContentLoaded", () => {
   const btnBuscar = document.getElementById("btnBuscarProduto");
   const inputBuscar = document.getElementById("buscaTermo");
@@ -389,7 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // buscarProdutosRein(1);
 });
 
-// detalhes via REIN
+// detalhes via REIN (alert simples, opcional)
 async function verDetalhesRein(produtoId, botao) {
   if (!produtoId) return;
   const oldText = botao.textContent;
@@ -398,16 +417,25 @@ async function verDetalhesRein(produtoId, botao) {
 
   try {
     const res = await fetch(`${API_BASE}/rein/produto/${produtoId}`);
-    const data = await res.json();
-    if (!data.ok) {
-      alert(data.msg || "Erro ao carregar detalhes.");
-      return;
+    const payload = await res.json();
+
+    // aceita tanto { ok, data } quanto { status, data } ou objeto cru
+    let det;
+    if (payload && payload.ok && payload.data) {
+      det = payload.data;
+    } else if (
+      payload &&
+      payload.data &&
+      (payload.data.Nome || payload.data.ProdutoGrade)
+    ) {
+      det = payload.data;
+    } else {
+      det = payload;
     }
-    const det = data.data || {};
 
     alert(
-      `Produto: ${det.Nome || ""}\n` +
-        `NCM: ${det.Ncm || ""}\n` +
+      `Produto: ${det.Nome || det.nome || ""}\n` +
+        `NCM: ${det.Ncm || det.ncm || ""}\n` +
         `ID: ${det.Id || produtoId}`
     );
   } catch (err) {
