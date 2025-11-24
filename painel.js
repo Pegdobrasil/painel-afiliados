@@ -1,5 +1,8 @@
 const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
 
+// ===============================
+// SESSÃO E MENSAGENS
+// ===============================
 function getSession() {
   const raw = localStorage.getItem("painel_afiliado_session");
   return raw ? JSON.parse(raw) : null;
@@ -22,7 +25,7 @@ function msgSenha(text, tipo = "info") {
 }
 
 // ===============================
-// BUSCA PRODUTOS REIN
+// BUSCAR PRODUTOS (LISTAGEM)
 // ===============================
 async function buscarProdutosRein(page = 1) {
   const input = document.getElementById("buscaTermo");
@@ -66,7 +69,15 @@ async function buscarProdutosRein(page = 1) {
       card.type = "button";
       card.className =
         "card-produto w-full text-left bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-sky-500/70 hover:shadow-lg transition cursor-pointer";
-      card.setAttribute("data-produto-id", p.produto_id);
+
+      // Dataset com TUDO que o modal precisa reaproveitar
+      card.dataset.produtoId = p.produto_id || "";
+      card.dataset.sku = p.sku || "";
+      card.dataset.nome = p.nome || "";
+      card.dataset.ncm = p.ncm || "";
+      card.dataset.precoAtacado = String(precoAtacado);
+      card.dataset.precoVarejo = String(precoVarejo);
+      card.dataset.imagem = capa || "";
 
       card.innerHTML = `
         <div class="relative aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
@@ -79,7 +90,7 @@ async function buscarProdutosRein(page = 1) {
         </div>
         <div class="p-3 flex-1 flex flex-col gap-1">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-[11px] text-slate-400">SKU: ${p.sku}</span>
+            <span class="text-[11px] text-slate-400">SKU: ${p.sku || ""}</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full border ${
               p.ativo
                 ? "border-emerald-500/60 text-emerald-300 bg-emerald-500/5"
@@ -111,8 +122,9 @@ async function buscarProdutosRein(page = 1) {
         </div>
       `;
 
+      // Abre o modal usando APENAS os dados já carregados no card
       card.addEventListener("click", () => {
-        abrirModalProduto(p.produto_id);
+        abrirModalProdutoDoCard(card);
       });
 
       container.appendChild(card);
@@ -124,56 +136,44 @@ async function buscarProdutosRein(page = 1) {
   }
 }
 
-// Normaliza o detalhe vindo da API da REIN (produto cru) para o formato usado no modal
+// ===============================
+// NORMALIZAR DETALHE DA REIN
+// ===============================
 function normalizarDetalheRein(raw) {
   if (!raw) return null;
 
-  // Algumas rotas podem devolver { status, data: { ... } }.
-  // Neste caso, usamos sempre o conteúdo de "data".
-  const data =
+  const base =
     raw && raw.data && (raw.data.ProdutoGrade || raw.data.ProdutoDescricao)
       ? raw.data
       : raw;
 
-  // Se já vier no formato esperado (nome + imagens), só retorna
-  if (data.nome && Array.isArray(data.imagens)) {
-    return data;
-  }
-
   const det = {};
 
-  // nome, descrição e NCM
-  det.nome = data.Nome || data.nome || "";
-  det.descricao = data.Descricao || data.descricao || "";
+  det.nome = base.Nome || "";
+  det.ncm = base.Ncm || "";
 
-  // pega a primeira grade do produto (padrão)
-  const grades = data.ProdutoGrade || data.produtoGrade || [];
+  // descrição via ProdutoDescricao
+  let desc = "";
+  if (Array.isArray(base.ProdutoDescricao) && base.ProdutoDescricao.length) {
+    const ativo =
+      base.ProdutoDescricao.find((d) => d.Ativo) || base.ProdutoDescricao[0];
+    desc = ativo.Descricao || ativo.Titulo || "";
+  }
+  det.descricao = desc;
+
+  const grades = base.ProdutoGrade || [];
   const grade = grades[0] || {};
 
-  det.sku = grade.Sku || grade.sku || "";
-  det.ncm = grade.Ncm || data.Ncm || data.ncm || "";
+  det.sku = grade.Sku || "";
 
-  // pesos
-  const pesoLiq = Number(
-    grade.PesoLiquido ?? data.PesoLiquido ?? data.peso_liquido ?? 0
-  );
-  const pesoBru = Number(
-    grade.PesoBruto ?? data.PesoBruto ?? data.peso_bruto ?? pesoLiq
-  );
+  const pesoLiq = Number(grade.PesoLiquido ?? base.PesoLiquido ?? 0);
+  const pesoBru = Number(grade.PesoBruto ?? base.PesoBruto ?? pesoLiq);
   det.peso_liquido = Number.isFinite(pesoLiq) ? pesoLiq : 0;
   det.peso_bruto = Number.isFinite(pesoBru) ? pesoBru : det.peso_liquido;
 
-  // dimensões (em cm)
-  const largura = Number(
-    grade.Largura ?? data.Largura ?? data.largura_cm ?? 0
-  );
-  const altura = Number(
-    grade.Altura ?? data.Altura ?? data.altura_cm ?? 0
-  );
-  const comp = Number(
-    grade.Comprimento ?? data.Comprimento ?? data.comprimento_cm ?? 0
-  );
-
+  const largura = Number(grade.Largura ?? base.Largura ?? 0);
+  const altura = Number(grade.Altura ?? base.Altura ?? 0);
+  const comp = Number(grade.Comprimento ?? base.Comprimento ?? 0);
   det.largura_cm = Number.isFinite(largura) ? largura : 0;
   det.altura_cm = Number.isFinite(altura) ? altura : 0;
   det.comprimento_cm = Number.isFinite(comp) ? comp : 0;
@@ -185,21 +185,30 @@ function normalizarDetalheRein(raw) {
     det.cubagem = 0;
   }
 
-  // preços (ProdutoMargem da grade)
+  // preços pela ProdutoMargem
   let precoAt = 0;
   let precoVar = 0;
   for (const m of grade.ProdutoMargem || []) {
     const nomeTabela = ((m.TabelaPreco || {}).Nome || "").toUpperCase();
     let preco = Number(m.PrecoComDesconto ?? m.Preco ?? 0);
     if (!Number.isFinite(preco)) preco = 0;
-
     if (nomeTabela.includes("ATACADO")) precoAt = preco;
     if (nomeTabela.includes("VAREJO")) precoVar = preco;
   }
   det.preco_atacado = precoAt;
   det.preco_varejo = precoVar;
 
-  // imagens da grade
+  // categorias
+  const categorias = [];
+  for (const pc of base.ProdutoCategoria || []) {
+    const cat = pc.Categoria || {};
+    const pai = cat.CategoriaPai || {};
+    if (pai.Nome && cat.Nome) categorias.push(`${pai.Nome} > ${cat.Nome}`);
+    else if (cat.Nome) categorias.push(cat.Nome);
+  }
+  det.categorias = categorias;
+
+  // imagens
   const cdnBase =
     "https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/";
   const imagens = [];
@@ -212,19 +221,12 @@ function normalizarDetalheRein(raw) {
   }
   det.imagens = imagens;
 
-  // categorias em texto (para exibir no modal)
-  const categorias = [];
-  for (const pc of data.ProdutoCategoria || []) {
-    const cat = pc.Categoria || {};
-    const pai = cat.CategoriaPai || {};
-    if (pai.Nome && cat.Nome) categorias.push(`${pai.Nome} > ${cat.Nome}`);
-    else if (cat.Nome) categorias.push(cat.Nome);
-  }
-  det.categorias = categorias;
-
   return det;
 }
 
+// ===============================
+// MODAL DE PRODUTO
+// ===============================
 function fecharModalProduto() {
   const modal = document.getElementById("modalProduto");
   if (!modal) return;
@@ -232,9 +234,11 @@ function fecharModalProduto() {
   modal.classList.remove("flex");
 }
 
-async function abrirModalProduto(produtoId) {
+function abrirModalProdutoDoCard(card) {
   const modal = document.getElementById("modalProduto");
   if (!modal) return;
+
+  const produtoId = card.dataset.produtoId || "";
 
   const titulo = document.getElementById("modalProdutoTitulo");
   const skuEl = document.getElementById("modalProdutoSku");
@@ -250,49 +254,73 @@ async function abrirModalProduto(produtoId) {
   modal.classList.remove("hidden");
   modal.classList.add("flex");
 
-  titulo.textContent = "Carregando...";
-  skuEl.textContent = "";
+  // Dados imediatos vindos do card (sem novo GET)
+  const nome = card.dataset.nome || "Produto";
+  const sku = card.dataset.sku || "-";
+  const ncm = card.dataset.ncm || "-";
+  const precoAtacado = Number(card.dataset.precoAtacado || 0);
+  const precoVarejo = Number(card.dataset.precoVarejo || 0);
+  const capa = card.dataset.imagem || "";
+
+  titulo.textContent = nome;
+  skuEl.textContent = `SKU: ${sku} • NCM: ${ncm}`;
   catEl.textContent = "-";
-  descEl.textContent = "";
+  descEl.textContent = "Sem descrição cadastrada.";
   pesoEl.textContent = "-";
   dimEl.textContent = "-";
-  precoAEl.textContent = "R$ 0,00";
-  precoVEl.textContent = "R$ 0,00";
-  imagensEl.innerHTML =
-    '<div class="text-[11px] text-slate-400">Carregando imagens...</div>';
+  precoAEl.textContent = `R$ ${precoAtacado.toFixed(2)}`;
+  precoVEl.textContent = `R$ ${precoVarejo.toFixed(2)}`;
+
+  if (capa) {
+    imagensEl.innerHTML = `
+      <img src="${capa}" alt="${nome.replace(
+        /"/g,
+        "&quot;"
+      )}" class="w-full h-full object-contain" />
+    `;
+  } else {
+    imagensEl.innerHTML =
+      '<div class="text-[11px] text-slate-400">Sem imagens cadastradas.</div>';
+  }
   thumbsEl.innerHTML = "";
+
+  // Completa com detalhe da REIN (peso, descrição, mais imagens, etc.)
+  if (produtoId) {
+    completarDetalhePorId(produtoId);
+  }
+}
+
+async function completarDetalhePorId(produtoId) {
+  const catEl = document.getElementById("modalProdutoCategoria");
+  const descEl = document.getElementById("modalProdutoDescricao");
+  const pesoEl = document.getElementById("modalProdutoPeso");
+  const dimEl = document.getElementById("modalProdutoDimensoes");
+  const precoAEl = document.getElementById("modalProdutoPrecoAtacado");
+  const precoVEl = document.getElementById("modalProdutoPrecoVarejo");
+  const imagensEl = document.getElementById("modalProdutoImagens");
+  const thumbsEl = document.getElementById("modalProdutoThumbs");
+  const titulo = document.getElementById("modalProdutoTitulo");
 
   try {
     const res = await fetch(`${API_BASE}/rein/produto/${produtoId}`);
-    if (!res.ok) throw new Error("Erro HTTP no detalhe");
+    if (!res.ok) return;
 
     const payload = await res.json();
+    const det = normalizarDetalheRein(payload);
+    if (!det) return;
 
-    // aceita tanto { ok, data } quanto objeto cru da REIN ou {status, data}
-    let det = null;
-    if (payload && payload.ok && payload.data) {
-      det = payload.data;
-    } else {
-      det = normalizarDetalheRein(payload);
+    if (det.nome) {
+      titulo.textContent = det.nome;
     }
 
-    if (!det) throw new Error("Detalhe vazio");
-
-    // TÍTULO, SKU, NCM
-    titulo.textContent = det.nome || "Produto";
-    skuEl.textContent = `SKU: ${det.sku || "-"} • NCM: ${det.ncm || "-"}`;
-
-    // CATEGORIA
-    if (Array.isArray(det.categorias) && det.categorias.length) {
+    if (det.categorias && det.categorias.length) {
       catEl.textContent = det.categorias.join(" | ");
-    } else {
-      catEl.textContent = "-";
     }
 
-    // DESCRIÇÃO
-    descEl.textContent = det.descricao || "Sem descrição cadastrada.";
+    if (det.descricao) {
+      descEl.textContent = det.descricao;
+    }
 
-    // PESOS
     const pesoLiq = Number(det.peso_liquido ?? 0);
     const pesoBru = Number(det.peso_bruto ?? 0);
     if (pesoLiq || pesoBru) {
@@ -301,78 +329,63 @@ async function abrirModalProduto(produtoId) {
       pesoEl.textContent = `Líquido: ${liq.toFixed(
         3
       )} kg • Bruto: ${bru.toFixed(3)} kg`;
-    } else {
-      pesoEl.textContent = "-";
     }
 
-    // DIMENSÕES
     const largura = Number(det.largura_cm ?? 0);
     const altura = Number(det.altura_cm ?? 0);
     const comp = Number(det.comprimento_cm ?? 0);
-    const cubagem = Number(det.cubagem ?? 0);
-
+    const cub = Number(det.cubagem ?? 0);
     if (largura || altura || comp) {
       let textoDim = `${largura.toFixed(1)} x ${altura.toFixed(
         1
       )} x ${comp.toFixed(1)} cm`;
-      if (cubagem) {
-        textoDim += ` (Cubagem: ${cubagem.toFixed(4)})`;
+      if (cub) {
+        textoDim += ` (Cubagem: ${cub.toFixed(4)})`;
       }
       dimEl.textContent = textoDim;
-    } else {
-      dimEl.textContent = "-";
     }
 
-    // PREÇOS
-    precoAEl.textContent = `R$ ${Number(
-      det.preco_atacado || 0
-    ).toFixed(2)}`;
-    precoVEl.textContent = `R$ ${Number(
-      det.preco_varejo || 0
-    ).toFixed(2)}`;
+    if (typeof det.preco_atacado === "number") {
+      precoAEl.textContent = `R$ ${det.preco_atacado.toFixed(2)}`;
+    }
+    if (typeof det.preco_varejo === "number") {
+      precoVEl.textContent = `R$ ${det.preco_varejo.toFixed(2)}`;
+    }
 
-    // IMAGENS
     const imagens = det.imagens || [];
+    if (imagens.length) {
+      function renderPrincipal(src) {
+        imagensEl.innerHTML = `
+          <img src="${src}" alt="${(det.nome || "")
+            .replace(/"/g, "&quot;")}" class="w-full h-full object-contain" />
+        `;
+      }
 
-    if (!imagens.length) {
-      imagensEl.innerHTML =
-        '<div class="text-[11px] text-slate-400">Sem imagens cadastradas.</div>';
-      return;
-    }
+      renderPrincipal(imagens[0].conteudo);
 
-    function renderImagemPrincipal(src) {
-      imagensEl.innerHTML = `
-        <img src="${src}" alt="${(det.nome || "")
-          .replace(/"/g, "&quot;")}" class="w-full h-full object-contain" />
-      `;
-    }
-
-    renderImagemPrincipal(imagens[0].conteudo || imagens[0]);
-
-    thumbsEl.innerHTML = "";
-    for (const img of imagens) {
-      const src = img.conteudo || img;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className =
-        "border border-slate-700 rounded-md overflow-hidden w-16 h-16 flex-shrink-0 hover:border-sky-500";
-      btn.innerHTML = `<img src="${src}" class="w-full h-full object-cover" />`;
-      btn.addEventListener("click", () => renderImagemPrincipal(src));
-      thumbsEl.appendChild(btn);
+      thumbsEl.innerHTML = "";
+      for (const img of imagens) {
+        const src = img.conteudo;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          "border border-slate-700 rounded-md overflow-hidden w-16 h-16 flex-shrink-0 hover:border-sky-500";
+        btn.innerHTML = `<img src="${src}" class="w-full h-full object-cover" />`;
+        btn.addEventListener("click", () => renderPrincipal(src));
+        thumbsEl.appendChild(btn);
+      }
     }
   } catch (err) {
     console.error(err);
-    titulo.textContent = "Erro ao carregar detalhes";
-    imagensEl.innerHTML =
-      '<div class="text-[11px] text-red-500">Não foi possível carregar o produto.</div>';
   }
 }
 
-// eventos de fechar modal
+// Fechar modal por clique / ESC
 document.addEventListener("click", (ev) => {
   const closeBtn = ev.target.closest("#modalProdutoFechar");
   if (closeBtn) {
     fecharModalProduto();
+    return;
   }
 
   const modal = document.getElementById("modalProduto");
@@ -389,81 +402,16 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const btnBuscar = document.getElementById("btnBuscarProduto");
-  const inputBuscar = document.getElementById("buscaTermo");
-
-  if (btnBuscar) {
-    btnBuscar.addEventListener("click", () => buscarProdutosRein(1));
-  }
-  if (inputBuscar) {
-    inputBuscar.addEventListener("keyup", (ev) => {
-      if (ev.key === "Enter") {
-        buscarProdutosRein(1);
-      }
-    });
-  }
-
-  // pode disparar uma busca inicial vazia se quiser
-  // buscarProdutosRein(1);
-});
-
-// detalhes via REIN (alert simples, opcional)
-async function verDetalhesRein(produtoId, botao) {
-  if (!produtoId) return;
-  const oldText = botao.textContent;
-  botao.disabled = true;
-  botao.textContent = "Carregando...";
-
-  try {
-    const res = await fetch(`${API_BASE}/rein/produto/${produtoId}`);
-    const payload = await res.json();
-
-    // aceita tanto { ok, data } quanto { status, data } ou objeto cru
-    let det;
-    if (payload && payload.ok && payload.data) {
-      det = payload.data;
-    } else if (
-      payload &&
-      payload.data &&
-      (payload.data.Nome || payload.data.ProdutoGrade)
-    ) {
-      det = payload.data;
-    } else {
-      det = payload;
-    }
-
-    alert(
-      `Produto: ${det.Nome || det.nome || ""}\n` +
-        `NCM: ${det.Ncm || det.ncm || ""}\n` +
-        `ID: ${det.Id || produtoId}`
-    );
-  } catch (err) {
-    console.error(err);
-    alert("Erro ao carregar detalhes do produto.");
-  } finally {
-    botao.disabled = false;
-    botao.textContent = oldText;
-  }
-}
-
-// delegação de eventos para o botão "Ver detalhes"
-document.addEventListener("click", function (ev) {
-  const btn = ev.target.closest(".btn-ver-detalhes");
-  if (!btn) return;
-  const produtoId = btn.getAttribute("data-produto-id");
-  verDetalhesRein(produtoId, btn);
-});
-
 // ===============================
-// API: SALDO E PEDIDOS
+// SALDO / PEDIDOS
 // ===============================
 async function carregarSaldo(id) {
   try {
     const res = await fetch(`${API_BASE}/auth/saldo/${id}`);
     const data = await res.json();
     const val = data?.total || 0;
-    document.getElementById("saldo").textContent = "R$ " + val.toFixed(2);
+    const el = document.getElementById("saldo");
+    if (el) el.textContent = "R$ " + val.toFixed(2);
   } catch (err) {
     console.error(err);
   }
@@ -473,7 +421,8 @@ async function carregarPedidos(id) {
   try {
     const res = await fetch(`${API_BASE}/auth/pedidos/${id}`);
     const pedidos = await res.json();
-    document.getElementById("pedidos").textContent = pedidos.length || 0;
+    const elQtd = document.getElementById("pedidos");
+    if (elQtd) elQtd.textContent = pedidos.length || 0;
 
     const tbody = document.getElementById("tabelaPedidos");
     if (!tbody) return;
@@ -493,7 +442,7 @@ async function carregarPedidos(id) {
 }
 
 // ===============================
-// UTM
+// UTM / LINK AFILIADO
 // ===============================
 async function gerarLink() {
   const url = document.getElementById("urlProduto").value.trim();
@@ -591,8 +540,10 @@ async function salvarMinhaConta() {
         email: atualizado.email,
       })
     );
-    document.getElementById("nome").textContent = atualizado.nome;
-    document.getElementById("email").textContent = atualizado.email;
+    if (document.getElementById("nome"))
+      document.getElementById("nome").textContent = atualizado.nome;
+    if (document.getElementById("email"))
+      document.getElementById("email").textContent = atualizado.email;
 
     msgConta("Dados atualizados com sucesso.");
   } catch (err) {
@@ -646,7 +597,7 @@ async function alterarSenha() {
 }
 
 // ===============================
-// NAVEGAÇÃO E SESSÃO
+// NAVEGAÇÃO / SESSÃO DO PAINEL
 // ===============================
 function scrollMinhaConta() {
   const sec = document.getElementById("sec_minhaconta");
@@ -663,7 +614,7 @@ function sair() {
   window.location.href = "index.html";
 }
 
-// carrega o sub-html da busca de produtos
+// Carregar subhtml de busca de produto
 async function carregarSecaoBuscarProduto() {
   const wrapper = document.getElementById("sec_buscar_produto_wrapper");
   if (!wrapper) return;
@@ -702,7 +653,7 @@ async function carregarSecaoBuscarProduto() {
   }
 }
 
-// protege o painel e carrega dados iniciais
+// Protege o painel e carrega dados iniciais
 async function protegerPainel() {
   const session = getSession();
   if (!session) {
