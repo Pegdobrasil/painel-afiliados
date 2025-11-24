@@ -318,8 +318,11 @@ async function completarDetalhePorId(produtoId) {
     }
 
     if (det.descricao) {
-      descEl.textContent = det.descricao;
+  // A descrição vem da REIN em HTML (com <p>, <br>, entidades etc.)
+  // innerHTML faz o navegador renderizar certinho com acentos e quebras.
+      descEl.innerHTML = det.descricao;
     }
+
 
     const pesoLiq = Number(det.peso_liquido ?? 0);
     const pesoBru = Number(det.peso_bruto ?? 0);
