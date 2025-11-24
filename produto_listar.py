@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 import math
 import requests
 import config
+from produto_detalhar import detalhar_produto
 
 EP_LIST = "/api/v1/produto"
 
@@ -53,7 +54,13 @@ def _precos_por_tabela(grade: Dict[str, Any]) -> Dict[str, float]:
 def _imagem_capa(grade: Dict[str, Any]) -> str | None:
     """
     Monta a URL da primeira imagem da grade usando ProdutoImagem.NomeImagem.
+
+    OBS: a REIN só traz ProdutoImagem no GET de detalhe.
+    Quem chamar essa função deve passar uma grade que já tenha ProdutoImagem.
     """
+    if not grade:
+        return None
+
     imagens = grade.get("ProdutoImagem") or []
     if not imagens:
         return None
@@ -149,29 +156,63 @@ def preparar_resultados(
       - preco_atacado
       - preco_varejo
       - imagem_capa
+
+    IMPORTANTE:
+    O endpoint de LISTAGEM normalmente NÃO traz ProdutoImagem.
+    Aqui buscamos o detalhe do produto (GET /api/v1/produto/{id})
+    apenas 1 vez por produto e reaproveitamos para todas as grades.
     """
     termo = (termo or "").strip()
     linhas: List[Dict[str, Any]] = []
 
+    # cache para não chamar o detalhe várias vezes para o mesmo produto
+    detalhe_cache: Dict[str, Dict[str, Any]] = {}
+
     for p in items or []:
+        produto_id = p.get("Id")
+        produto_id_str = str(produto_id)
+
         ativo = p.get("DataInativado") in (None, "", "null")
         if status == "ativos" and not ativo:
             continue
         if status == "inativos" and ativo:
             continue
 
-        for g in (p.get("ProdutoGrade") or []):
+        grades = p.get("ProdutoGrade") or []
+
+        # verifica se na própria listagem já veio alguma imagem
+        tem_imagem_na_listagem = any(
+            (g.get("ProdutoImagem") or []) for g in grades
+        )
+        if not tem_imagem_na_listagem and produto_id is not None:
+            try:
+                if produto_id_str not in detalhe_cache:
+                    detalhe_cache[produto_id_str] = detalhar_produto(produto_id)
+
+                det = detalhe_cache[produto_id_str] or {}
+                grades_det = det.get("ProdutoGrade") or []
+                # map grade_id -> grade_detalhe (que tem ProdutoImagem)
+                map_det = {str(gd.get("Id")): gd for gd in grades_det}
+            except Exception:
+                map_det = {}
+        else:
+            map_det = {}
+
+        for g in grades:
             sku = str(g.get("Sku") or "")
             if sku_exato and termo and sku != termo:
                 continue
 
             estoque = _sum_estoque(g.get("ProdutoLocal") or [])
             precos = _precos_por_tabela(g)
-            imagem_capa = _imagem_capa(g)
+
+            # tenta localizar a grade detalhada (com ProdutoImagem) pelo Id
+            g_det = map_det.get(str(g.get("Id"))) if map_det else None
+            imagem_capa = _imagem_capa(g_det or g)
 
             linhas.append(
                 {
-                    "produto_id": p.get("Id"),
+                    "produto_id": produto_id,
                     "grade_id": g.get("Id"),
                     "sku": sku,
                     "nome": p.get("Nome") or "",
