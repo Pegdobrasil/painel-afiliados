@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+import secrets
+import string
 
 from .database import get_db, Base, engine
 from .models import Usuario
 from . import schemas
+from .email_config import send_email  # novo módulo de e-mail
 
 # Garante que as tabelas existam tanto no SQLite quanto no Postgres
 Base.metadata.create_all(bind=engine)
@@ -13,7 +16,61 @@ router = APIRouter()
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
-# -------- CADASTRO --------
+# ----------------- HELPERS -----------------
+
+
+def gerar_senha_aleatoria(tamanho: int = 10) -> str:
+    """Gera uma senha aleatória com letras e números."""
+    alfabeto = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alfabeto) for _ in range(tamanho))
+
+
+def enviar_email_boas_vindas(usuario: Usuario) -> None:
+    """Envia e-mail de boas-vindas após cadastro de afiliado."""
+    try:
+        html = f"""
+        <p>Olá, {usuario.nome}!</p>
+        <p>Seu cadastro no <strong>Painel de Afiliados PEG do Brasil</strong> foi realizado com sucesso.</p>
+        <p>Você já pode acessar o painel usando este e-mail na tela de login.</p>
+        <p>Se você não reconhece este cadastro, responda este e-mail para nossa equipe de suporte.</p>
+        <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
+        """
+        send_email(
+            to_email=usuario.email,
+            subject="Cadastro realizado - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as exc:
+        # Não vamos quebrar o cadastro por erro de e-mail, apenas logar no console
+        print(f"[WARN] Erro ao enviar e-mail de boas-vindas: {exc}")
+
+
+def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
+    """Envia e-mail com nova senha gerada na recuperação de conta."""
+    try:
+        html = f"""
+        <p>Olá, {usuario.nome}!</p>
+        <p>Você solicitou a redefinição de senha do seu acesso ao
+        <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
+        <p>Sua nova senha é:</p>
+        <p><strong>{senha_plana}</strong></p>
+        <p>Por segurança, após acessar o painel, recomendamos alterar essa senha na área
+        <strong>Meus Dados &gt; Alterar Senha</strong>.</p>
+        <p>Se você não fez essa solicitação, entre em contato com nossa equipe imediatamente.</p>
+        <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
+        """
+        send_email(
+            to_email=usuario.email,
+            subject="Nova senha de acesso - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as exc:
+        print(f"[WARN] Erro ao enviar e-mail de recuperação: {exc}")
+
+
+# ----------------- CADASTRO -----------------
+
+
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     """Cadastro de usuário usado pelo cadastro.html.
@@ -28,7 +85,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
         raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
 
-    # Gera hash da senha
+    # Gera hash da senha informada (cliente novo define a própria senha)
     try:
         senha_hash = pwd_context.hash(data.senha)
     except Exception as exc:
@@ -53,6 +110,9 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
+    # E-mail de boas-vindas (não bloqueia o fluxo se falhar)
+    enviar_email_boas_vindas(user)
+
     return {
         "status": "success",
         "message": "Cadastro realizado com sucesso!",
@@ -60,7 +120,9 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     }
 
 
-# -------- LOGIN --------
+# ----------------- LOGIN -----------------
+
+
 @router.post("/login")
 def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     """Login usado pelo index.html.
@@ -86,7 +148,9 @@ def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     }
 
 
-# -------- LISTA / ADMIN (para futuro painel admin) --------
+# ----------------- LISTA / ADMIN -----------------
+
+
 @router.get("/users", response_model=list[schemas.UsuarioOut])
 def listar_usuarios(db: Session = Depends(get_db)):
     return db.query(Usuario).all()
@@ -106,21 +170,29 @@ def atualizar_usuario(
     data: schemas.UsuarioUpdate,
     db: Session = Depends(get_db),
 ):
+    """
+    Atualização de dados do afiliado.
+
+    OBS: CPF/CNPJ e e-mail NÃO podem ser alterados aqui.
+    Qualquer tentativa de alteração desses campos deve ser feita via ticket/suporte.
+    """
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    # Troca de e-mail
+    # Bloqueia alteração de e-mail
     if data.email and data.email != user.email:
-        if db.query(Usuario).filter(Usuario.email == data.email).first():
-            raise HTTPException(status_code=400, detail="E-mail já está em uso")
-        user.email = data.email
+        raise HTTPException(
+            status_code=400,
+            detail="E-mail não pode ser alterado pelo painel. Abra um ticket com o suporte.",
+        )
 
-    # Troca de CPF/CNPJ
+    # Bloqueia alteração de CPF/CNPJ
     if data.cpf_cnpj and data.cpf_cnpj != user.cpf_cnpj:
-        if db.query(Usuario).filter(Usuario.cpf_cnpj == data.cpf_cnpj).first():
-            raise HTTPException(status_code=400, detail="CPF/CNPJ já está em uso")
-        user.cpf_cnpj = data.cpf_cnpj
+        raise HTTPException(
+            status_code=400,
+            detail="CPF/CNPJ não pode ser alterado pelo painel. Abra um ticket com o suporte.",
+        )
 
     if data.tipo_pessoa is not None:
         user.tipo_pessoa = data.tipo_pessoa
@@ -146,7 +218,9 @@ def atualizar_usuario(
     return user
 
 
-# -------- ALTERAR SENHA (dentro do painel) --------
+# ----------------- ALTERAR SENHA (dentro do painel) -----------------
+
+
 @router.post("/change-password/{user_id}")
 def alterar_senha(
     user_id: int,
@@ -165,19 +239,38 @@ def alterar_senha(
     return {"status": "success", "message": "Senha alterada com sucesso."}
 
 
-# -------- RECUPERAR CONTA (tela de login) --------
+# ----------------- RECUPERAR CONTA (tela de login) -----------------
+
+
 @router.post("/recover")
 def recuperar_conta(data: schemas.PasswordReset, db: Session = Depends(get_db)):
+    """
+    Fluxo de 'Esqueci minha senha':
+    - Recebe apenas o e-mail.
+    - Gera uma nova senha aleatória.
+    - Atualiza o hash no banco.
+    - Envia a nova senha por e-mail.
+    """
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
+        # Para não dar dica se o e-mail existe ou não, pode devolver a mesma mensagem.
         raise HTTPException(status_code=404, detail="E-mail não encontrado")
 
-    user.senha_hash = pwd_context.hash(data.nova_senha)
+    nova_senha_plana = gerar_senha_aleatoria()
+    user.senha_hash = pwd_context.hash(nova_senha_plana)
     db.commit()
-    return {"status": "success", "message": "Senha redefinida com sucesso."}
+
+    enviar_email_nova_senha(user, nova_senha_plana)
+
+    return {
+        "status": "success",
+        "message": "Se o e-mail estiver cadastrado, uma nova senha foi enviada.",
+    }
 
 
-# -------- STUBS PARA PAINEL (placeholders) --------
+# ----------------- STUBS PARA PAINEL (placeholders) -----------------
+
+
 @router.get("/pedidos/{afiliado_id}")
 def listar_pedidos(afiliado_id: int):
     """Stub para no futuro listar pedidos de um afiliado."""
