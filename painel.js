@@ -123,6 +123,90 @@ async function buscarProdutosRein(page = 1) {
       '<div class="col-span-full px-3 py-3 text-xs text-red-500">Erro ao buscar produtos.</div>';
   }
 }
+// Normaliza o detalhe vindo da API da REIN (produto cru) para o formato usado no modal
+function normalizarDetalheRein(raw) {
+  if (!raw) return null;
+
+  // Se já vier no formato esperado (nome + imagens), só retorna
+  if (raw.nome && Array.isArray(raw.imagens)) {
+    return raw;
+  }
+
+  const det = {};
+  det.nome = raw.Nome || raw.nome || "";
+  det.descricao = raw.Descricao || raw.descricao || "";
+
+  // pega a primeira grade do produto (padrão)
+  const grades = raw.ProdutoGrade || raw.produtoGrade || [];
+  const grade = grades[0] || {};
+
+  det.sku = grade.Sku || grade.sku || "";
+  det.ncm = grade.Ncm || raw.Ncm || raw.ncm || "";
+
+  // pesos
+  const pesoLiq = Number(
+    grade.PesoLiquido ?? raw.PesoLiquido ?? raw.peso_liquido ?? 0
+  );
+  const pesoBru = Number(
+    grade.PesoBruto ?? raw.PesoBruto ?? raw.peso_bruto ?? pesoLiq
+  );
+  det.peso_liquido = Number.isFinite(pesoLiq) ? pesoLiq : 0;
+  det.peso_bruto = Number.isFinite(pesoBru) ? pesoBru : det.peso_liquido;
+
+  // dimensões (em cm)
+  const largura = Number(
+    grade.Largura ?? raw.Largura ?? raw.largura_cm ?? 0
+  );
+  const altura = Number(
+    grade.Altura ?? raw.Altura ?? raw.altura_cm ?? 0
+  );
+  const comp = Number(
+    grade.Comprimento ?? raw.Comprimento ?? raw.comprimento_cm ?? 0
+  );
+
+  det.largura_cm = Number.isFinite(largura) ? largura : 0;
+  det.altura_cm = Number.isFinite(altura) ? altura : 0;
+  det.comprimento_cm = Number.isFinite(comp) ? comp : 0;
+
+  if (det.largura_cm && det.altura_cm && det.comprimento_cm) {
+    det.cubagem =
+      (det.largura_cm * det.altura_cm * det.comprimento_cm) / 1_000_000;
+  } else {
+    det.cubagem = 0;
+  }
+
+  // preços (ProdutoMargem da grade)
+  let precoAt = 0;
+  let precoVar = 0;
+  for (const m of grade.ProdutoMargem || []) {
+    const nomeTabela = ((m.TabelaPreco || {}).Nome || "").toUpperCase();
+    let preco = Number(m.PrecoComDesconto ?? m.Preco ?? 0);
+    if (!Number.isFinite(preco)) preco = 0;
+
+    if (nomeTabela.includes("ATACADO")) precoAt = preco;
+    if (nomeTabela.includes("VAREJO")) precoVar = preco;
+  }
+  det.preco_atacado = precoAt;
+  det.preco_varejo = precoVar;
+
+  // imagens da grade
+  const cdnBase =
+    "https://cdn.rein.net.br/app/core/pegdobrasil/6.5.4/publico/imagem/produto/";
+  const imagens = [];
+  for (const img of grade.ProdutoImagem || []) {
+    const nome =
+      img.NomeImagem || img.strNomeArquivo || img.NomeArquivo || img.nome;
+    if (!nome) continue;
+    const nomeLimpo = String(nome).trim().replace(/^\/+/, "");
+    imagens.push({ conteudo: cdnBase + nomeLimpo });
+  }
+  det.imagens = imagens;
+
+  // categorias (se quiser usar depois)
+  det.categorias = [];
+
+  return det;
+}
 function fecharModalProduto() {
   const modal = document.getElementById("modalProduto");
   if (!modal) return;
@@ -165,31 +249,73 @@ async function abrirModalProduto(produtoId) {
     if (!res.ok) throw new Error("Erro HTTP no detalhe");
 
     const payload = await res.json();
-    if (!payload.ok || !payload.data) throw new Error("Detalhe vazio");
 
-    const det = payload.data;
+    // aceita tanto { ok, data } quanto objeto cru da REIN
+    let det = null;
+    if (payload && payload.ok && payload.data) {
+      det = payload.data;
+    } else {
+      det = normalizarDetalheRein(payload);
+    }
 
+    if (!det) throw new Error("Detalhe vazio");
+
+    // TÍTULO, SKU, NCM
     titulo.textContent = det.nome || "Produto";
-    skuEl.textContent = `SKU: ${det.sku} • NCM: ${det.ncm || "-"}`;
-    catEl.textContent = det.categorias && det.categorias.length
-      ? `IDs: ${det.categorias.join(" > ")}`
-      : "-";
+    skuEl.textContent = `SKU: ${det.sku || "-"} • NCM: ${det.ncm || "-"}`;
+
+    // CATEGORIA (se vier algo em det.categorias)
+    if (Array.isArray(det.categorias) && det.categorias.length) {
+      catEl.textContent = `IDs: ${det.categorias.join(" > ")}`;
+    } else {
+      catEl.textContent = "-";
+    }
+
+    // DESCRIÇÃO
     descEl.textContent = det.descricao || "Sem descrição cadastrada.";
 
-    pesoEl.textContent = `Líquido: ${det.peso_liquido.toFixed(
-      3
-    )} kg • Bruto: ${det.peso_bruto.toFixed(3)} kg`;
-    dimEl.textContent = `${det.largura_cm.toFixed(
-      1
-    )} x ${det.altura_cm.toFixed(1)} x ${det.comprimento_cm.toFixed(
-      1
-    )} cm (Cubagem: ${det.cubagem.toFixed(4)})`;
+    // PESOS
+    const pesoLiq = Number(det.peso_liquido ?? 0);
+    const pesoBru = Number(det.peso_bruto ?? 0);
+    if (pesoLiq || pesoBru) {
+      const liq = Number.isFinite(pesoLiq) ? pesoLiq : 0;
+      const bru = Number.isFinite(pesoBru) ? pesoBru : liq;
+      pesoEl.textContent = `Líquido: ${liq.toFixed(
+        3
+      )} kg • Bruto: ${bru.toFixed(3)} kg`;
+    } else {
+      pesoEl.textContent = "-";
+    }
 
-    precoAEl.textContent = `R$ ${Number(det.preco_atacado || 0).toFixed(2)}`;
-    precoVEl.textContent = `R$ ${Number(det.preco_varejo || 0).toFixed(2)}`;
+    // DIMENSÕES
+    const largura = Number(det.largura_cm ?? 0);
+    const altura = Number(det.altura_cm ?? 0);
+    const comp = Number(det.comprimento_cm ?? 0);
+    const cubagem = Number(det.cubagem ?? 0);
 
-    // imagens
+    if (largura || altura || comp) {
+      let textoDim = `${largura.toFixed(1)} x ${altura.toFixed(
+        1
+      )} x ${comp.toFixed(1)} cm`;
+      if (cubagem) {
+        textoDim += ` (Cubagem: ${cubagem.toFixed(4)})`;
+      }
+      dimEl.textContent = textoDim;
+    } else {
+      dimEl.textContent = "-";
+    }
+
+    // PREÇOS
+    precoAEl.textContent = `R$ ${Number(
+      det.preco_atacado || 0
+    ).toFixed(2)}`;
+    precoVEl.textContent = `R$ ${Number(
+      det.preco_varejo || 0
+    ).toFixed(2)}`;
+
+    // IMAGENS
     const imagens = det.imagens || [];
+
     if (!imagens.length) {
       imagensEl.innerHTML =
         '<div class="text-[11px] text-slate-400">Sem imagens cadastradas.</div>';
@@ -199,20 +325,21 @@ async function abrirModalProduto(produtoId) {
     function renderImagemPrincipal(src) {
       imagensEl.innerHTML = `
         <img src="${src}" alt="${(det.nome || "")
-        .replace(/"/g, "&quot;")}" class="w-full h-full object-contain" />
+          .replace(/"/g, "&quot;")}" class="w-full h-full object-contain" />
       `;
     }
 
-    renderImagemPrincipal(imagens[0].conteudo);
+    renderImagemPrincipal(imagens[0].conteudo || imagens[0]);
 
     thumbsEl.innerHTML = "";
     for (const img of imagens) {
+      const src = img.conteudo || img;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className =
         "border border-slate-700 rounded-md overflow-hidden w-16 h-16 flex-shrink-0 hover:border-sky-500";
-      btn.innerHTML = `<img src="${img.conteudo}" class="w-full h-full object-cover" />`;
-      btn.addEventListener("click", () => renderImagemPrincipal(img.conteudo));
+      btn.innerHTML = `<img src="${src}" class="w-full h-full object-cover" />`;
+      btn.addEventListener("click", () => renderImagemPrincipal(src));
       thumbsEl.appendChild(btn);
     }
   } catch (err) {
