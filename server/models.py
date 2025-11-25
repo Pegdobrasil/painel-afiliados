@@ -7,13 +7,14 @@ class Usuario(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Dados
-    tipo_pessoa = Column(String, nullable=False)
-    cpf_cnpj = Column(String, nullable=False, unique=True, index=True)
-    nome = Column(String, nullable=False)
-    email = Column(String, nullable=False, unique=True, index=True)
+    # Dados cadastrais principais
+    tipo_pessoa = Column(String, nullable=False)  # 'PF' ou 'PJ'
+    cpf_cnpj = Column(String, unique=True, nullable=False, index=True)
 
+    nome = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
     telefone = Column(String, nullable=True)
+
     cep = Column(String, nullable=True)
     endereco = Column(String, nullable=True)
     numero = Column(String, nullable=True)
@@ -21,11 +22,11 @@ class Usuario(Base):
     cidade = Column(String, nullable=True)
     estado = Column(String, nullable=True)
 
-    # Login
+    # Autenticação
     senha_hash = Column(String, nullable=False)
 
-    # Integração Rein
+    # Integração com a Rein (Pessoa / Cliente)
     rein_pessoa_id = Column(Integer, nullable=True, index=True)
 
-    # Primeiro acesso
+    # Flag futura de segurança (primeiro acesso obrigatório trocar senha)
     first_login_must_change = Column(Boolean, default=False)
