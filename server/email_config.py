@@ -7,7 +7,7 @@ import string
 from .database import get_db, Base, engine
 from .models import Usuario
 from . import schemas
-from .email_config import send_email  # novo módulo de e-mail
+
 
 # Garante que as tabelas existam tanto no SQLite quanto no Postgres
 Base.metadata.create_all(bind=engine)
