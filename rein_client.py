@@ -6,11 +6,16 @@ import config
 session = requests.Session()
 
 EP_LIST = "/api/v1/produto"         # GET ?page=1&termo={sku}
+# ============================================================
+# PESSOA (Cliente) – helpers para cadastro de afiliado
+# ============================================================
+
 EP_PESSOA = "/api/v1/pessoa"
+
 
 def _put(path: str, **kw) -> requests.Response:
     """
-    Wrapper para PUT na Rein usando o mesmo esquema de headers dos produtos.
+    Wrapper de PUT na Rein usando o mesmo esquema de headers dos produtos.
     """
     url = f"{config.REIN_BASE}{path}"
     return session.put(url, headers=config.rein_headers(path), timeout=60, **kw)
@@ -22,21 +27,19 @@ def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dic
     tipo_pessoa: 'PF' ou 'PJ'
     Retorna o primeiro registro encontrado ou None.
     """
-    path = "/api/v1/pessoa"
     params = {
         "page": 1,
         "termo": cpf_cnpj,
-        # se no seu ERP precisar filtrar mais, pode ativar:
-        # "tipoPessoa": tipo_pessoa,  # PF / PJ
+        # Se quiser filtrar mais depois:
+        # "tipoPessoa": tipo_pessoa,
         # "status": "ativo",
         # "tipoCliente": "cliente",
     }
 
-    resp = _get(path, params=params)
+    resp = _get(EP_PESSOA, params=params)
     resp.raise_for_status()
-    data = resp.json()
+    data = resp.json() or {}
 
-    # Segue a mesma lógica que você já usa em produtos: data -> items
     items = None
     if isinstance(data.get("data"), dict) and "items" in data["data"]:
         items = data["data"]["items"]
@@ -51,43 +54,36 @@ def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dic
 
 def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Monta o JSON mínimo para cadastrar Pessoa na Rein usando o que vem do form de afiliado.
-    Aqui estamos mandando só o básico – dá pra enriquecer depois.
+    Monta o JSON mínimo para cadastrar Pessoa na Rein usando o form de afiliado.
     """
     cpf_cnpj = usuario_data["cpf_cnpj"]
-    tipo_pessoa = usuario_data["tipo_pessoa"].upper()  # 'PF' ou 'PJ'
+    tipo_pessoa = usuario_data["tipo_pessoa"].upper()
     nome = usuario_data["nome"]
 
     is_pf = tipo_pessoa == "PF"
 
     payload: Dict[str, Any] = {
-        "TipoPessoa": tipo_pessoa,          # PF ou PJ
+        "TipoPessoa": tipo_pessoa,               # PF ou PJ
         "Nome": nome,
         "RazaoSocial": None if is_pf else nome,
         "Cpf": cpf_cnpj if is_pf else None,
         "Cnpj": cpf_cnpj if not is_pf else None,
-        "TipoCliente": "cliente",           # ajuste se no ERP for outro valor
-        "Status": 1,                        # ativo
-        "Observacao": "Cadastro criado automaticamente pelo painel de afiliados.",
+        "TipoCliente": "cliente",
+        "Status": 1,
+        "Observacao": "Cadastro criado automaticamente pelo Painel de Afiliados.",
     }
-
-    # Se quiser já mandar e-mail e endereço depois, a gente ajusta aqui:
-    # payload["CadastroGeralEmail"] = [...]
-    # payload["CadastroGeralEndereco"] = [...]
 
     return payload
 
 
 def criar_pessoa_na_rein(dados: Dict[str, Any]) -> int:
     """
-    Cria uma nova pessoa na Rein via PUT /api/v1/pessoa.
-    'dados' precisa seguir a estrutura básica do Example Value do PDF.
+    Cria uma nova Pessoa na Rein via PUT /api/v1/pessoa.
     Retorna o ID da pessoa criada.
     """
-    path = "/api/v1/pessoa"
-    resp = _put(path, json=dados)
+    resp = _put(EP_PESSOA, json=dados)
     resp.raise_for_status()
-    data = resp.json()
+    data = resp.json() or {}
 
     pessoa_id = data.get("intId") or data.get("Id") or data.get("id")
     if not pessoa_id:
@@ -99,7 +95,6 @@ def criar_pessoa_na_rein(dados: Dict[str, Any]) -> int:
 def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
     """
     Garante que exista uma Pessoa na Rein e devolve o ID.
-
     - Se já existir (busca pelo CPF/CNPJ), retorna o ID existente.
     - Se não existir, cria uma nova Pessoa e retorna o novo ID.
     """
@@ -117,9 +112,9 @@ def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
             raise RuntimeError(f"Pessoa encontrada na Rein, mas sem ID claro: {existente}")
         return int(pessoa_id)
 
-    # Não achou: cria nova Pessoa
     payload = montar_payload_pessoa_para_cadastro(usuario_data)
     return criar_pessoa_na_rein(payload)
+
 
 def _get(path: str, **kw):
     url = f"{config.REIN_BASE}{path}"
@@ -218,5 +213,6 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
         "produto_raw": det or item,  # prioriza o detalhe
         "grade_raw": grade2 or grade
     }
+
 
 
