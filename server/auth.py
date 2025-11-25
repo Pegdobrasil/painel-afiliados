@@ -76,68 +76,64 @@ def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
 
 @router.post("/register", response_model=schemas.UsuarioOut)
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    """Cadastro de afiliado.
+    """Cadastro de afiliado integrado à REIN."""
 
-    Fluxo:
-    - Normaliza CPF/CNPJ
-    - Verifica se já existe usuário com mesmo e-mail ou documento
-    - Consulta Pessoa na REIN
-        - se existir, reaproveita e vincula rein_pessoa_id
-        - se não existir, cria Pessoa na REIN
-    - Cria usuário local com senha escolhida no formulário
-    """
+    # ------------------------------
+    # Trata CPF/CNPJ
+    # ------------------------------
     documento = "".join(filter(str.isdigit, data.cpf_cnpj or ""))
-    tipo_pessoa = (data.tipo_pessoa or "").upper()
 
-    if not documento:
-        raise HTTPException(status_code=400, detail="CPF/CNPJ inválido.")
+    if len(documento) == 11:
+        tipo_pessoa = "PF"
+    elif len(documento) == 14:
+        tipo_pessoa = "PJ"
+    else:
+        raise HTTPException(400, "CPF/CNPJ inválido.")
 
-    # E-mail duplicado
+    # ------------------------------
+    # Verifica duplicidade local
+    # ------------------------------
     if db.query(Usuario).filter(Usuario.email == data.email).first():
-        raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
+        raise HTTPException(400, "E-mail já cadastrado.")
 
-    # CPF / CNPJ duplicado
     if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
-        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado.")
+        raise HTTPException(400, "CPF/CNPJ já cadastrado.")
 
-    # Consulta Pessoa na REIN
+    # ------------------------------
+    # Consulta Pessoa na Rein
+    # ------------------------------
     try:
         pessoa = rein_client.buscar_pessoa_por_documento(
             cpf_cnpj=documento,
-            tipo_pessoa=tipo_pessoa,
+            tipo_pessoa=tipo_pessoa
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao consultar cliente na REIN: {e}",
-        )
+        raise HTTPException(500, f"Erro ao consultar cliente na Rein: {e}")
 
+    # ------------------------------
+    # Se existe na Rein → reaproveita
+    # Se não existe → cria
+    # ------------------------------
     if pessoa:
-        # Já existe cliente na REIN → reaproveita
         pessoa_id = pessoa.get("Id") or pessoa.get("intId") or pessoa.get("id")
         if not pessoa_id:
-            raise HTTPException(
-                status_code=500,
-                detail="Cliente encontrado na REIN sem ID válido.",
-            )
+            raise HTTPException(500, "Cliente existente na Rein sem ID válido.")
         rein_pessoa_id = int(pessoa_id)
     else:
-        # Não existe → cria novo cliente na REIN
         try:
             rein_pessoa_id = rein_client.get_or_create_pessoa_rein(
                 {
                     "tipo_pessoa": tipo_pessoa,
                     "cpf_cnpj": documento,
-                    "nome": data.nome,
+                    "nome": data.nome
                 }
             )
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Erro ao criar cliente na REIN: {e}",
-            )
+            raise HTTPException(500, f"Erro ao criar cliente na Rein: {e}")
 
-    # Cria usuário local
+    # ------------------------------
+    # Criação local do afiliado
+    # ------------------------------
     senha_hash = _hash_password(data.senha)
 
     novo = Usuario(
