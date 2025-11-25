@@ -1,23 +1,14 @@
-from datetime import datetime, timedelta
-import secrets
-import string
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+import secrets
+import string
 
 from .database import get_db, Base, engine
 from .models import Usuario
 from . import schemas
 from .email_config import send_email
-
-from rein_client import (
-    get_or_create_pessoa_rein,
-    buscar_pessoa_por_documento,
-)
-
-# URL da tela de reset de senha no front
-FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/reset_senha.html"
+from .rein_client import buscar_pessoa_por_documento, get_or_create_pessoa_rein
 
 # Garante que as tabelas existam
 Base.metadata.create_all(bind=engine)
@@ -35,13 +26,15 @@ def gerar_senha_aleatoria(tamanho: int = 10) -> str:
     return "".join(secrets.choice(alfabeto) for _ in range(tamanho))
 
 
-def enviar_email_boas_vindas(usuario: Usuario) -> None:
-    """E-mail de boas-vindas após cadastro (cliente novo criado na Rein)."""
+def enviar_email_boas_vindas(usuario: Usuario, mensagem_extra: str | None = None) -> None:
+    """E-mail de boas-vindas após cadastro de afiliado."""
     try:
+        extra = mensagem_extra or ""
         html = f"""
         <p>Olá, {usuario.nome}!</p>
         <p>Seu cadastro no <strong>Painel de Afiliados PEG do Brasil</strong> foi realizado com sucesso.</p>
         <p>Você já pode acessar o painel usando este e-mail na tela de login.</p>
+        {extra}
         <p>Se você não reconhece este cadastro, responda este e-mail para nossa equipe de suporte.</p>
         <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
         """
@@ -54,89 +47,76 @@ def enviar_email_boas_vindas(usuario: Usuario) -> None:
         print(f"[WARN] Erro ao enviar e-mail de boas-vindas: {exc}")
 
 
-def enviar_email_senha_temporaria(usuario: Usuario, senha_plana: str) -> None:
-    """E-mail com senha temporária (cliente que já existia no ERP)."""
+def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
+    """Envia e-mail com nova senha gerada na recuperação de conta."""
     try:
         html = f"""
         <p>Olá, {usuario.nome}!</p>
-        <p>Identificamos que você já possuía cadastro como cliente em nosso sistema.</p>
-        <p>Criamos seu acesso ao <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
-        <p>Seus dados de acesso são:</p>
-        <p><strong>Usuário:</strong> {usuario.email}<br>
-        <strong>Senha temporária:</strong> {senha_plana}</p>
-        <p>Por segurança, ao acessar o painel você será solicitado a alterar essa senha.</p>
-        <p>Se você não reconhece este acesso, responda este e-mail imediatamente.</p>
-        <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
-        """
-        send_email(
-            to_email=usuario.email,
-            subject="Acesso ao Painel de Afiliados - senha temporária",
-            html_body=html,
-        )
-    except Exception as exc:
-        print(f"[WARN] Erro ao enviar e-mail de senha temporária: {exc}")
-
-
-def enviar_email_link_redefinicao(usuario: Usuario, token: str) -> None:
-    """E-mail com link para redefinir senha (esqueci minha senha)."""
-    try:
-        link = f"{FRONT_RESET_URL}?token={token}"
-        html = f"""
-        <p>Olá, {usuario.nome}!</p>
-        <p>Você solicitou a redefinição de senha do seu acesso ao
+        <p>Conforme solicitado, geramos uma nova senha para o seu acesso ao
         <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
-        <p>Para criar uma nova senha, clique no link abaixo:</p>
-        <p><a href="{link}" target="_blank">{link}</a></p>
-        <p>Se você não fez essa solicitação, ignore este e-mail.</p>
+        <p><strong>Nova senha:</strong> {senha_plana}</p>
+        <p>Por segurança, recomendamos que você altere essa senha após o primeiro acesso.</p>
+        <p>Se você não fez essa solicitação, responda este e-mail imediatamente.</p>
         <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
         """
         send_email(
             to_email=usuario.email,
-            subject="Redefinição de senha - Painel de Afiliados PEG do Brasil",
+            subject="Nova senha - Painel de Afiliados PEG do Brasil",
             html_body=html,
         )
     except Exception as exc:
-        print(f"[WARN] Erro ao enviar e-mail de redefinição: {exc}")
+        print(f"[WARN] Erro ao enviar e-mail de nova senha: {exc}")
 
 
-# ----------------- CADASTRO (com Rein) -----------------
+# ----------------- CADASTRO (REGISTER) -----------------
 
 
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     """
-    Cadastro usado pelo cadastro.html.
+    Cadastro do afiliado.
 
-    Regras:
-    - Se CPF/CNPJ já existir COMO USUÁRIO do painel, bloqueia.
-    - Se CPF/CNPJ existir na Rein e ainda não existir no painel:
-        -> cria usuário com senha aleatória,
-        -> manda por e-mail,
-        -> marca first_login_must_change = True.
-    - Se não existir Pessoa na Rein:
-        -> cria Pessoa na Rein,
-        -> usa a senha escolhida pelo afiliado normalmente.
+    Lógica:
+    1. Normaliza CPF/CNPJ.
+    2. Verifica se já existe usuário no painel (CPF ou e-mail).
+    3. Faz GET na Rein por CPF/CNPJ:
+       - Se achar Pessoa:
+           - Se ainda não existir usuário no painel, cria usuário vinculado
+             à Pessoa da Rein e usa a senha informada.
+             Marca first_login_must_change = True.
+       - Se não achar Pessoa:
+           - Cria Pessoa na Rein e depois cria usuário no painel
+             com a senha informada e first_login_must_change = False.
     """
 
-    # Normalizar CPF/CNPJ (só dígitos)
+    # Normaliza CPF/CNPJ
     documento = "".join(filter(str.isdigit, data.cpf_cnpj))
-    tipo_pessoa = data.tipo_pessoa.upper()
+    tipo_pessoa = (data.tipo_pessoa or "").upper()
 
-    # 1) Já existe no painel (CPF/CNPJ ou e-mail)?
-    usuario_existente = (
-        db.query(Usuario)
-        .filter(
-            (Usuario.cpf_cnpj == documento) | (Usuario.email == data.email)
-        )
-        .first()
-    )
-    if usuario_existente:
+    # 1) Já existe usuário no painel (e-mail)?
+    if db.query(Usuario).filter(Usuario.email == data.email).first():
         raise HTTPException(
-            status_code=400,
-            detail="Já existe um cadastro com este CPF/CNPJ ou e-mail.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="E-mail já cadastrado.",
         )
 
-    # 2) Ver se já existe Pessoa na Rein
+    # 2) Já existe usuário no painel (CPF/CNPJ)?
+    if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CPF/CNPJ já cadastrado.",
+        )
+
+    # 3) Gera hash da senha escolhida
+    try:
+        senha_hash = pwd_context.hash(data.senha)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao gerar hash da senha: {exc}",
+        )
+
+    # 4) Consulta Pessoa na Rein pelo documento
     try:
         pessoa_existente = buscar_pessoa_por_documento(
             cpf_cnpj=documento,
@@ -144,18 +124,12 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         )
     except Exception as exc:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao consultar cliente na Rein: {exc}",
         )
 
-    # 2.1) Já tem cadastro no ERP, mas ainda não no painel
+    # 4A) Pessoa já existe na Rein → cria usuário vinculado, marcando first_login_must_change
     if pessoa_existente:
-        senha_temp = gerar_senha_aleatoria()
-        try:
-            senha_hash = pwd_context.hash(senha_temp)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Erro ao gerar hash: {exc}")
-
         pessoa_id = (
             pessoa_existente.get("Id")
             or pessoa_existente.get("intId")
@@ -177,22 +151,24 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
             senha_hash=senha_hash,
             rein_pessoa_id=int(pessoa_id) if pessoa_id else None,
             first_login_must_change=True,
-            ativo=True,
         )
 
         db.add(user)
         db.commit()
         db.refresh(user)
 
-        enviar_email_senha_temporaria(user, senha_temp)
+        enviar_email_boas_vindas(
+            user,
+            mensagem_extra="<p>Identificamos que você já possuía cadastro como cliente em nossa loja e vinculamos seu acesso ao Painel de Afiliados.</p>",
+        )
 
         return {
             "status": "success",
-            "message": "Cadastro vinculado ao cliente já existente na Rein. Senha temporária enviada por e-mail.",
+            "message": "Cadastro vinculado ao cliente já existente na Rein.",
             "id": user.id,
         }
 
-    # 2.2) Não existe Pessoa na Rein -> cria Pessoa nova e usa a senha escolhida
+    # 4B) Pessoa NÃO existe na Rein → cria Pessoa nova e depois o usuário
     try:
         pessoa_id = get_or_create_pessoa_rein(
             {
@@ -203,14 +179,9 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         )
     except Exception as exc:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao criar cliente na Rein: {exc}",
         )
-
-    try:
-        senha_hash = pwd_context.hash(data.senha)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar hash: {exc}")
 
     user = Usuario(
         tipo_pessoa=tipo_pessoa,
@@ -227,7 +198,6 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         senha_hash=senha_hash,
         rein_pessoa_id=pessoa_id,
         first_login_must_change=False,
-        ativo=True,
     )
 
     db.add(user)
@@ -238,7 +208,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
     return {
         "status": "success",
-        "message": "Cadastro realizado com sucesso!",
+        "message": "Cadastro realizado com sucesso.",
         "id": user.id,
     }
 
@@ -248,27 +218,29 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login_user(data: schemas.LoginRequest, db: Session = Depends(get_db)):
-    """Login usado pelo index.html (/api/auth/login)."""
+    """
+    Login usado pelo index.html.
+
+    Resposta já no formato que o auth.js espera:
+    {
+      "id": ...,
+      "nome": "...",
+      "email": "...",
+      "first_login_must_change": false
+    }
+    """
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
         raise HTTPException(status_code=400, detail="E-mail não encontrado")
-
-    if not user.ativo:
-        raise HTTPException(status_code=403, detail="Usuário inativo no painel.")
 
     if not pwd_context.verify(data.senha, user.senha_hash):
         raise HTTPException(status_code=400, detail="Senha inválida")
 
     return {
-        "status": "success",
-        "message": "Login realizado com sucesso!",
-        "user": {
-            "id": user.id,
-            "nome": user.nome,
-            "email": user.email,
-            "rein_pessoa_id": user.rein_pessoa_id,
-            "first_login_must_change": user.first_login_must_change,
-        },
+        "id": user.id,
+        "nome": user.nome,
+        "email": user.email,
+        "first_login_must_change": getattr(user, "first_login_must_change", False),
     }
 
 
@@ -295,9 +267,7 @@ def atualizar_usuario(
     db: Session = Depends(get_db),
 ):
     """
-    Atualização de dados do afiliado.
-
-    OBS: CPF/CNPJ e e-mail NÃO podem ser alterados aqui.
+    Atualização de dados cadastrais (exceto e-mail e CPF/CNPJ).
     """
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
     if not user:
@@ -307,14 +277,14 @@ def atualizar_usuario(
     if data.email and data.email != user.email:
         raise HTTPException(
             status_code=400,
-            detail="E-mail não pode ser alterado pelo painel. Abra um ticket com o suporte.",
+            detail="E-mail não pode ser alterado pelo painel.",
         )
 
     # Bloqueia alteração de CPF/CNPJ
     if data.cpf_cnpj and data.cpf_cnpj != user.cpf_cnpj:
         raise HTTPException(
             status_code=400,
-            detail="CPF/CNPJ não pode ser alterado pelo painel. Abra um ticket com o suporte.",
+            detail="CPF/CNPJ não pode ser alterado pelo painel.",
         )
 
     if data.tipo_pessoa is not None:
@@ -358,8 +328,9 @@ def alterar_senha(
         raise HTTPException(status_code=400, detail="Senha atual incorreta")
 
     user.senha_hash = pwd_context.hash(data.senha_nova)
-    user.first_login_must_change = False  # se era primeiro acesso, libera de vez
+    user.first_login_must_change = False
     db.commit()
+
     return {"status": "success", "message": "Senha alterada com sucesso."}
 
 
@@ -367,75 +338,38 @@ def alterar_senha(
 
 
 @router.post("/recover")
-def solicitar_recuperacao(data: schemas.PasswordRecover, db: Session = Depends(get_db)):
+def recuperar_conta(data: schemas.PasswordReset, db: Session = Depends(get_db)):
     """
-    Etapa 1: 'Esqueci minha senha'
-    - Recebe apenas o e-mail.
-    - Gera um token temporário.
-    - Salva no banco com validade.
-    - Envia link por e-mail.
+    Fluxo simplificado de 'Esqueci minha senha':
+    - Recebe e-mail e nova senha (como está hoje no auth.js).
+    - Atualiza a senha e envia um e-mail avisando.
     """
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
-        # Opcional: devolver mensagem genérica para não revelar se o e-mail existe.
         raise HTTPException(status_code=404, detail="E-mail não encontrado")
 
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=1)
-
-    user.reset_token = token
-    user.reset_token_expires_at = expires_at
-    db.commit()
-
-    enviar_email_link_redefinicao(user, token)
-
-    return {
-        "status": "success",
-        "message": "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.",
-    }
-
-
-@router.post("/reset-password")
-def reset_password(data: schemas.PasswordReset, db: Session = Depends(get_db)):
-    """
-    Etapa 2: redefinir senha usando o token enviado por e-mail.
-    - Recebe token + nova senha.
-    - Valida token e expiração.
-    - Atualiza a senha e limpa o token.
-    """
-    user = db.query(Usuario).filter(Usuario.reset_token == data.token).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="Token inválido ou já utilizado.")
-
-    if not user.reset_token_expires_at or user.reset_token_expires_at < datetime.utcnow():
-        # Limpa token expirado
-        user.reset_token = None
-        user.reset_token_expires_at = None
-        db.commit()
-        raise HTTPException(status_code=400, detail="Token expirado. Solicite uma nova redefinição.")
-
     user.senha_hash = pwd_context.hash(data.nova_senha)
-    user.reset_token = None
-    user.reset_token_expires_at = None
     user.first_login_must_change = False
     db.commit()
 
-    return {"status": "success", "message": "Senha redefinida com sucesso."}
+    enviar_email_nova_senha(user, data.nova_senha)
+
+    return {
+        "status": "success",
+        "message": "Senha redefinida com sucesso.",
+    }
 
 
-# ----------------- STUBS PARA PAINEL (pedidos/saldo) -----------------
+# ----------------- STUBS PARA PAINEL -----------------
 
 
 @router.get("/pedidos/{afiliado_id}")
 def listar_pedidos(afiliado_id: int):
-    """
-    Stub para, no futuro, integrar com /api/v1/pedido da Rein
-    usando CodOrigem = 20, CodVendedor = 457 e a condição de pagamento do JSON.
-    """
+    """Stub para, no futuro, listar pedidos da Rein para o afiliado."""
     return []
 
 
 @router.get("/saldo/{afiliado_id}")
 def saldo_afiliado(afiliado_id: int):
-    """Stub para no futuro mostrar o saldo do afiliado."""
+    """Stub para, no futuro, mostrar o saldo do afiliado."""
     return {"total": 0.0}
