@@ -7,3 +7,4 @@ passlib
 psycopg2-binary
 requests
 python-multipart
+send_email
