@@ -7,113 +7,122 @@ session = requests.Session()
 
 EP_LIST = "/api/v1/produto"         # GET ?page=1&termo={sku}
 # ============================================================
-# PESSOA (Cliente) – helpers para cadastro de afiliado
+# PESSOA (CLIENTE / AFILIADO) NA REIN
 # ============================================================
+from typing import Any, Dict, List, Optional
 
-EP_PESSOA = "/api/v1/pessoa"
 
-
-def _put(path: str, **kw) -> requests.Response:
-    """
-    Wrapper de PUT na Rein usando o mesmo esquema de headers dos produtos.
-    """
-    url = f"{config.REIN_BASE}{path}"
-    return session.put(url, headers=config.rein_headers(path), timeout=60, **kw)
+def _extract_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Helper genérico para lidar com respostas paginadas da REIN."""
+    if not data:
+        return []
+    d = data.get("data")
+    if isinstance(d, dict) and "items" in d:
+        return d.get("items") or []
+    if isinstance(d, list):
+        return d
+    return []
 
 
 def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dict[str, Any]]:
     """
-    Consulta /api/v1/pessoa filtrando pelo CPF/CNPJ.
+    Busca uma pessoa na REIN pelo CPF/CNPJ.
+
     tipo_pessoa: 'PF' ou 'PJ'
-    Retorna o primeiro registro encontrado ou None.
     """
     params = {
+        "tipoPessoa": (tipo_pessoa or "").upper(),  # PF ou PJ
+        "status": "ativo",
+        "tipoCliente": "cliente",
         "page": 1,
         "termo": cpf_cnpj,
-        # Se quiser filtrar mais depois:
-        # "tipoPessoa": tipo_pessoa,
-        # "status": "ativo",
-        # "tipoCliente": "cliente",
     }
+    resp = _get("/api/v1/pessoa", params=params)
+    resp.raise_for_status()
+    items = _extract_items(resp.json())
+    return items[0] if items else None
 
-    resp = _get(EP_PESSOA, params=params)
+
+def _put(path: str, json: Optional[Dict[str, Any]] = None, **kw):
+    url = f"{config.REIN_BASE}{path}"
+    return session.put(
+        url,
+        headers=config.rein_headers(path),
+        json=json,
+        timeout=60,
+        **kw,
+    )
+
+
+def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
+    """Cria uma nova pessoa na REIN via PUT /api/v1/pessoa e retorna o ID."""
+    resp = _put("/api/v1/pessoa", json=payload)
     resp.raise_for_status()
     data = resp.json() or {}
-
-    items = None
-    if isinstance(data.get("data"), dict) and "items" in data["data"]:
-        items = data["data"]["items"]
-    else:
-        items = data.get("data")
-
-    if not items:
-        return None
-
-    return items[0]
+    pessoa_id = data.get("intId") or data.get("Id") or data.get("id")
+    if not pessoa_id:
+        raise RuntimeError(f"Não foi possível obter o ID da pessoa criada: {data}")
+    return int(pessoa_id)
 
 
 def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Monta o JSON mínimo para cadastrar Pessoa na Rein usando o form de afiliado.
-    """
-    cpf_cnpj = usuario_data["cpf_cnpj"]
-    tipo_pessoa = usuario_data["tipo_pessoa"].upper()
-    nome = usuario_data["nome"]
+    """Monta o JSON mínimo para cadastrar Pessoa na Rein usando o cadastro de afiliado."""
+    cpf_cnpj = usuario_data.get("cpf_cnpj")
+    tipo_pessoa = (usuario_data.get("tipo_pessoa") or "").upper()
+    nome = usuario_data.get("nome") or ""
 
     is_pf = tipo_pessoa == "PF"
 
     payload: Dict[str, Any] = {
-        "TipoPessoa": tipo_pessoa,               # PF ou PJ
+        "TipoPessoa": tipo_pessoa,  # PF ou PJ
         "Nome": nome,
         "RazaoSocial": None if is_pf else nome,
         "Cpf": cpf_cnpj if is_pf else None,
         "Cnpj": cpf_cnpj if not is_pf else None,
         "TipoCliente": "cliente",
         "Status": 1,
-        "Observacao": "Cadastro criado automaticamente pelo Painel de Afiliados.",
+        "CadastroGeralEmail": [],
+        "CadastroGeralEndereco": [],
+        "Observacao": "Cadastro criado automaticamente pelo painel de afiliados.",
     }
 
     return payload
 
 
-def criar_pessoa_na_rein(dados: Dict[str, Any]) -> int:
-    """
-    Cria uma nova Pessoa na Rein via PUT /api/v1/pessoa.
-    Retorna o ID da pessoa criada.
-    """
-    resp = _put(EP_PESSOA, json=dados)
-    resp.raise_for_status()
-    data = resp.json() or {}
-
-    pessoa_id = data.get("intId") or data.get("Id") or data.get("id")
-    if not pessoa_id:
-        raise RuntimeError(f"Não foi possível identificar o ID da pessoa criada na Rein: {data}")
-
-    return int(pessoa_id)
-
-
 def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
-    """
-    Garante que exista uma Pessoa na Rein e devolve o ID.
-    - Se já existir (busca pelo CPF/CNPJ), retorna o ID existente.
-    - Se não existir, cria uma nova Pessoa e retorna o novo ID.
-    """
-    tipo_pessoa = usuario_data["tipo_pessoa"].upper()
-    cpf_cnpj = usuario_data["cpf_cnpj"]
+    """Garante que exista uma Pessoa na REIN para este afiliado e retorna o ID."""
+    tipo_pessoa = (usuario_data.get("tipo_pessoa") or "").upper()
+    cpf_cnpj = usuario_data.get("cpf_cnpj") or ""
 
     existente = buscar_pessoa_por_documento(cpf_cnpj=cpf_cnpj, tipo_pessoa=tipo_pessoa)
     if existente:
-        pessoa_id = (
-            existente.get("Id")
-            or existente.get("intId")
-            or existente.get("id")
-        )
+        pessoa_id = existente.get("Id") or existente.get("intId") or existente.get("id")
         if not pessoa_id:
-            raise RuntimeError(f"Pessoa encontrada na Rein, mas sem ID claro: {existente}")
+            raise RuntimeError(f"Pessoa encontrada na REIN sem ID claro: {existente}")
         return int(pessoa_id)
 
     payload = montar_payload_pessoa_para_cadastro(usuario_data)
     return criar_pessoa_na_rein(payload)
+
+
+# ============================================================
+# PEDIDOS NA REIN (LISTAGEM POR CLIENTE / AFILIADO)
+# ============================================================
+
+def listar_pedidos_por_cliente(rein_pessoa_id: int) -> List[Dict[str, Any]]:
+    """Lista pedidos na REIN filtrando pelo IdCliente (Pessoa).
+
+    Retorna a lista crua de pedidos vinda da API.
+    """
+    params = {
+        "IdCliente": rein_pessoa_id,
+        "page": 1,
+    }
+    resp = _get("/api/v1/pedido", params=params)
+    resp.raise_for_status()
+    data = resp.json() or {}
+    return _extract_items(data)
+
 
 
 def _get(path: str, **kw):
@@ -213,6 +222,7 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
         "produto_raw": det or item,  # prioriza o detalhe
         "grade_raw": grade2 or grade
     }
+
 
 
 
