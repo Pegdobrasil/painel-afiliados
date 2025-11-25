@@ -67,8 +67,16 @@ def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
 
 def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
     """Monta o JSON mínimo para cadastrar Pessoa na Rein usando o cadastro de afiliado."""
-    cpf_cnpj = usuario_data.get("cpf_cnpj")
-    tipo_pessoa = (usuario_data.get("tipo_pessoa") or "").upper()
+   cpf_cnpj = "".join(filter(str.isdigit, usuario_data.get("cpf_cnpj") or ""))
+
+# DETECÇÃO AUTOMÁTICA DE PESSOA
+if len(cpf_cnpj) == 11:
+    tipo_pessoa = "PF"
+elif len(cpf_cnpj) == 14:
+    tipo_pessoa = "PJ"
+else:
+    raise ValueError("CPF/CNPJ inválido para cadastro da Pessoa na Rein.")
+
     nome = usuario_data.get("nome") or ""
 
     is_pf = tipo_pessoa == "PF"
@@ -222,6 +230,7 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
         "produto_raw": det or item,  # prioriza o detalhe
         "grade_raw": grade2 or grade
     }
+
 
 
 
