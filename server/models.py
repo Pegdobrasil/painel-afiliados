@@ -7,24 +7,25 @@ class Usuario(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Dados cadastrais
-    tipo_pessoa = Column(String, nullable=False)  # "PF" ou "PJ"
-    cpf_cnpj = Column(String, unique=True, nullable=False, index=True)
+    # Dados
+    tipo_pessoa = Column(String, nullable=False)
+    cpf_cnpj = Column(String, nullable=False, unique=True, index=True)
     nome = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False, index=True)
-    telefone = Column(String)
-    cep = Column(String)
-    endereco = Column(String)
-    numero = Column(String)
-    bairro = Column(String)
-    cidade = Column(String)
-    estado = Column(String)
+    email = Column(String, nullable=False, unique=True, index=True)
 
-    # Autenticação
+    telefone = Column(String, nullable=True)
+    cep = Column(String, nullable=True)
+    endereco = Column(String, nullable=True)
+    numero = Column(String, nullable=True)
+    bairro = Column(String, nullable=True)
+    cidade = Column(String, nullable=True)
+    estado = Column(String, nullable=True)
+
+    # Login
     senha_hash = Column(String, nullable=False)
 
-    # Integração com a Rein
-    rein_pessoa_id = Column(Integer, index=True, nullable=True)
+    # Integração Rein
+    rein_pessoa_id = Column(Integer, nullable=True, index=True)
 
-    # Fluxo de segurança
+    # Primeiro acesso
     first_login_must_change = Column(Boolean, default=False)
