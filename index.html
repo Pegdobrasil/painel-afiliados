@@ -23,16 +23,6 @@
         transform: translateY(0);
       }
     }
-    .animated-bg {
-      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-      background-size: 400% 400%;
-      animation: gradient 15s ease infinite;
-    }
-    @keyframes gradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
 
     /* ---------------------------------------------
        CÓDIGO DO WHATSAPP (modelo com SVG e pulso)
@@ -99,9 +89,9 @@
   </style>
 </head>
 
-<body class="animated-bg flex items-center justify-center min-h-screen p-4">
+<body class="bg-gradient-to-br from-slate-950 via-sky-950 to-indigo-900 min-h-screen flex items-stretch justify-center px-4 py-6 md:py-10">
 
-  <div class="fade-in-up bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-8 w-full max-w-md border border-white/20 relative overflow-hidden">
+  <div class="fade-in-up w-full max-w-md bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden relative p-8">
     
     <div class="text-center mb-8">
       <!-- LOGO PEG -->
@@ -112,47 +102,47 @@
           class="h-16 w-auto mx-auto drop-shadow-md"
         >
       </div>
-      <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Bem-vindo de volta</h1>
-      <p class="text-gray-500 text-sm mt-2">Acesse o Painel de Afiliados</p>
+      <h1 class="text-2xl font-bold text-slate-50 tracking-tight">Bem-vindo de volta</h1>
+      <p class="text-slate-400 text-sm mt-2">Acesse o Painel de Afiliados</p>
     </div>
 
     <div class="space-y-5">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Email</label>
+        <label class="block text-sm font-medium text-slate-200 mb-1.5 ml-1">Email</label>
         <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
             <i data-lucide="mail" class="w-5 h-5"></i>
           </div>
           <input 
             id="email" 
             type="email" 
             placeholder="seu@email.com"
-            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+            class="w-full pl-10 pr-4 py-3 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all duration-200 bg-slate-900"
           >
         </div>
       </div>
 
       <div>
         <div class="flex items-center justify-between mb-1.5 ml-1">
-          <label class="block text-sm font-medium text-gray-700">Senha</label>
-          <button type="button" onclick="recuperarConta()" class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors">
+          <label class="block text-sm font-medium text-slate-200">Senha</label>
+          <button type="button" onclick="recuperarConta()" class="text-xs text-sky-400 hover:text-sky-300 font-medium transition-colors">
             Esqueceu a senha?
           </button>
         </div>
         <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
             <i data-lucide="lock" class="w-5 h-5"></i>
           </div>
           <input 
             id="senha" 
             type="password" 
             placeholder="••••••••"
-            class="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
+            class="w-full pl-10 pr-12 py-3 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all duration-200 bg-slate-900"
           >
           <button 
             type="button"
             onclick="togglePassword()"
-            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
           >
             <i id="eye-icon" data-lucide="eye" class="w-5 h-5"></i>
           </button>
@@ -163,28 +153,24 @@
       <button 
         type="button"
         onclick="login()" 
-        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]"
+        class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold py-3.5 rounded-xl shadow-lg shadow-sky-500/40 transform hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]"
       >
         Entrar
       </button>
     </div>
 
     <div class="mt-8 text-center">
-      <p class="text-sm text-gray-500">
+      <p class="text-sm text-slate-400">
         Ainda não tem acesso?
-        <a href="cadastro.html" class="text-blue-600 font-semibold hover:text-blue-700 transition-colors ml-1">Cadastre-se</a>
+        <a href="cadastro.html" class="text-sky-400 font-semibold hover:text-sky-300 transition-colors ml-1">Cadastre-se</a>
       </p>
 
-      <!-- LINHA "QUEM SOMOS" APONTANDO PARA quem_somos.html -->
-      <p class="text-sm text-gray-500 mt-2">
-        <a href="quem_somos.html" class="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+      <p class="text-sm text-slate-400 mt-2">
+        <a href="quem_somos.html" class="text-sky-400 font-semibold hover:text-sky-300 transition-colors">
           Quem Somos
         </a>
       </p>
     </div>
-    
-    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-xl pointer-events-none"></div>
-    <div class="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-pink-50 rounded-full opacity-50 blur-xl pointer-events-none"></div>
 
   </div>
 
