@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import secrets
 import string
 
-from . import models, schemas
-from .database import get_db, SessionLocal
-from .security import create_access_token, verify_password, get_password_hash
-from .email_config import send_email
-from .rein_client import get_or_create_pessoa_rein, buscar_pessoa_por_documento
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
+from .database import get_db, Base, engine
+from .models import Usuario
+from . import schemas
+from .email_config import send_email
+
+from rein_client import (
+    get_or_create_pessoa_rein,
+    buscar_pessoa_por_documento,
+)
 
 # URL da tela de reset de senha no front
 FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/reset_senha.html"
