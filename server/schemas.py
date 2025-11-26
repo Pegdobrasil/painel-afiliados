@@ -1,6 +1,5 @@
 from pydantic import BaseModel, ConfigDict
 
-
 # ===========================
 #  MODELOS DE USUÁRIO
 # ===========================
@@ -9,7 +8,7 @@ class UsuarioCreate(BaseModel):
     cpf_cnpj: str
     nome: str
     email: str
-    telefone: str | None = None  # agora opcional
+    telefone: str | None = None
     cep: str
     endereco: str
     numero: str
@@ -18,9 +17,6 @@ class UsuarioCreate(BaseModel):
     estado: str
     senha: str
 
-class ChangePasswordToken(BaseModel):
-    token: str
-    nova_senha: str
 
 class UsuarioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -62,15 +58,15 @@ class Login(BaseModel):
 
 
 # ===========================
-# PRIMEIRO ACESSO (TROCA DE SENHA)
+# TROCA DE SENHA (TOKEN)
 # ===========================
-class ChangePassword(BaseModel):
-    user_id: int
+class ChangePasswordToken(BaseModel):
+    token: str
     nova_senha: str
 
 
 # ===========================
-# RESET DE SENHA (OPCIONAL)
+# RESET DE SENHA
 # ===========================
 class PasswordReset(BaseModel):
     email: str
