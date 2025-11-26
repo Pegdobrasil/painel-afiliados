@@ -355,6 +355,38 @@ def saldo_afiliado(afiliado_id: int, db: Session = Depends(get_db)):
 
     return {"total": total}
 
+from datetime import datetime
+
+# ...
+
+@router.post("/change-password-token")
+def change_password_token(data: schemas.ChangePasswordToken, db: Session = Depends(get_db)):
+    """
+    Troca de senha feita SOMENTE via link de e-mail.
+    data: { token: str, nova_senha: str }
+    """
+    user = (
+        db.query(Usuario)
+        .filter(Usuario.reset_token == data.token)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    if user.reset_token_expires_at and user.reset_token_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Token expirado. Solicite um novo link.")
+
+    # define nova senha real
+    user.senha_hash = pwd_context.hash(data.nova_senha)
+    user.first_login_must_change = False
+    user.reset_token = None
+    user.reset_token_expires_at = None
+
+    db.commit()
+    db.refresh(user)
+
+    return {"status": "success", "message": "Senha alterada com sucesso. Já pode fazer login."}
 
 @router.get("/pedidos/{afiliado_id}")
 def listar_pedidos(afiliado_id: int, db: Session = Depends(get_db)):
