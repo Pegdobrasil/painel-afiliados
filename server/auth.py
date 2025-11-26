@@ -164,15 +164,14 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         # monta link de primeiro acesso
         reset_link = f"{FRONT_RESET_URL}?token={token}"
 
-        html = f"""
-        <p>Olá, {user.nome}!</p>
+        html = f"" <p>Olá, {user.nome}!</p>
         <p>Identificamos que você já era cliente PEG do Brasil.</p>
         <p>Para ativar seu acesso ao <strong>Painel de Afiliados</strong>,
         clique no link abaixo e defina sua senha:</p>
         <p><a href="{reset_link}">{reset_link}</a></p>
         <p>Este link é válido por 24 horas.</p>
         <p>Se você não solicitou este acesso, ignore este e-mail.</p>
-        """
+        ""
 
         try:
             send_email(
@@ -248,36 +247,41 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(data: schemas.Login, db: Session = Depends(get_db)):
-    usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
+    user = (
+        db.query(Usuario)
+        .filter(Usuario.email == data.email)
+        .first()
+    )
 
-    if not usuario:
+    if not user:
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos")
 
-    if not pwd_context.verify(data.senha, usuario.senha_hash):
+    if not pwd_context.verify(data.senha, user.senha_hash):
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos")
 
-    # Se for primeiro login → OBRIGA troca de senha
-    if usuario.first_login_must_change:
-        return {
-            "status": "change_password_required",
-            "message": "É necessário criar uma nova senha antes de acessar.",
-            "user_id": usuario.id,
-        }
+    # ⚠️ se ainda é primeiro acesso, obriga usar o link do e-mail
+    if user.first_login_must_change:
+        raise HTTPException(
+            status_code=400,
+            detail="Finalize seu cadastro pelo link enviado ao seu e-mail."
+        )
 
-    # Login normal
-    token = secrets.token_hex(32)
+    if not user.ativo:
+        raise HTTPException(status_code=403, detail="Usuário inativo.")
 
+    # aqui segue o que você já tinha (token, etc.)
     return {
         "status": "success",
-        "token": token,
-        "user_id": usuario.id,
-        "message": "Login realizado com sucesso",
+        "user": {
+            "id": user.id,
+            "nome": user.nome,
+            "email": user.email,
+        },
     }
 
 
-# =====================
-# ROTAS: RECUPERAR SENHA
-# =====================
+
+
 
 
 @router.post("/recover")
