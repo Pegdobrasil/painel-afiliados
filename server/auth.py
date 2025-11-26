@@ -201,23 +201,35 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
-    """Login simples usando e-mail + senha.
+def login(data: schemas.Login, db: Session = Depends(get_db)):
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.email == data.email)
+        .first()
+    )
 
-    Usado pelo auth.js na tela de login.
-    """
-    usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not usuario:
-        raise HTTPException(status_code=400, detail="E-mail não encontrado.")
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos")
 
-    if not _verify_password(data.senha, usuario.senha_hash):
-        raise HTTPException(status_code=400, detail="Senha incorreta.")
+    if not pwd_context.verify(data.senha, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos")
+
+    # Se for primeiro login → OBRIGA troca de senha
+    if usuario.first_login_must_change:
+        return {
+            "status": "change_password_required",
+            "message": "É necessário criar uma nova senha antes de acessar.",
+            "user_id": usuario.id
+        }
+
+    # Login normal
+    token = secrets.token_hex(32)
 
     return {
-        "id": usuario.id,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "rein_pessoa_id": usuario.rein_pessoa_id,
+        "status": "success",
+        "token": token,
+        "user_id": usuario.id,
+        "message": "Login realizado com sucesso"
     }
 
 
@@ -249,6 +261,24 @@ def recuperar_senha(data: schemas.PasswordReset, db: Session = Depends(get_db)):
 # ========================
 # ROTAS: SALDO E PEDIDOS
 # ========================
+@router.post("/change-password")
+def change_password(data: schemas.ChangePassword, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.id == data.user_id).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    # Atualiza senha
+    usuario.senha_hash = pwd_context.hash(data.nova_senha)
+    usuario.first_login_must_change = False
+
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "status": "success",
+        "message": "Senha alterada com sucesso, agora você já pode acessar o painel."
+    }
 
 
 @router.get("/saldo/{afiliado_id}")
