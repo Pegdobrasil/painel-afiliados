@@ -100,47 +100,46 @@ def enviar_email_senha_temporaria(usuario: Usuario, senha_plana: str) -> None:
 # ==============
 
 
+from datetime import datetime, timedelta
+import secrets
+
+FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/trocar_senha.html"
+
+# ...
+
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    """
-    Cadastro com integração à REIN.
+    # normaliza CPF/CNPJ
+    documento = "".join(filter(str.isdigit, data.cpf_cnpj))
 
-    FLUXOS:
+    # já existe usuário no painel?
+    existente = (
+        db.query(Usuario)
+        .filter(
+            (Usuario.cpf_cnpj == documento) | (Usuario.email == data.email)
+        )
+        .first()
+    )
+    if existente:
+        raise HTTPException(status_code=400, detail="Já existe um cadastro com este CPF/CNPJ ou e-mail.")
 
-    A) Se CPF/CNPJ já existir na REIN → NÃO cria na Rein
-       - Cria somente o usuário local
-       - Gera senha temporária
-       - Marca first_login_must_change = True
-       - Envia senha temporária por e-mail
+    # 1) VER SE JÁ EXISTE PESSOA NA REIN
+    pessoa_id = buscar_pessoa_por_documento(documento)
 
-    B) Se CPF/CNPJ NÃO existir na REIN → cria pessoa na Rein
-       - Usa a senha digitada pelo afiliado
-       - Marca first_login_must_change = False
-       - Envia e-mail normal de boas-vindas
-    """
+    # =================================================================
+    # CASO A: JÁ É CLIENTE NA REIN → NÃO PODE LOGAR DIRETO
+    # ENVIA LINK POR E-MAIL PARA DEFINIR A PRIMEIRA SENHA
+    # =================================================================
+    if pessoa_id:
+        # senha “lixo” só pra ter algo no hash
+        senha_hash_fake = pwd_context.hash(secrets.token_hex(16))
 
-    # ---- Normalização do documento ----
-    documento = re.sub(r"\D", "", data.cpf_cnpj)
-
-    # ---- Verificar duplicidade no PAINEL ----
-    if db.query(Usuario).filter(Usuario.email == data.email).first():
-        raise HTTPException(status_code=400, detail="E-mail já cadastrado")
-
-    if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
-        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
-
-    # ---- 1) CONSULTAR NA REIN ----
-    pessoa_existente_id = rein_client.buscar_pessoa_por_documento(documento)
-
-    # ----------------------------------------------------------------
-    # CASO A: Cliente já existe no ERP → cria usuário local + senha provisória
-    # ----------------------------------------------------------------
-    if pessoa_existente_id:
-        senha_temp = gerar_senha_aleatoria()
-        senha_hash = pwd_context.hash(senha_temp)
+        # gera token de reset
+        token = secrets.token_urlsafe(32)
+        expires = datetime.utcnow() + timedelta(hours=24)
 
         user = Usuario(
-            tipo_pessoa=data.tipo_pessoa,
+            tipo_pessoa=data.tipo_pessoa.upper(),
             cpf_cnpj=documento,
             nome=data.nome,
             email=data.email,
@@ -151,52 +150,68 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
             bairro=data.bairro,
             cidade=data.cidade,
             estado=data.estado,
-            senha_hash=senha_hash,
-            rein_pessoa_id=pessoa_existente_id,
+            senha_hash=senha_hash_fake,
+            rein_pessoa_id=pessoa_id,
             first_login_must_change=True,
+            reset_token=token,
+            reset_token_expires_at=expires,
         )
 
         db.add(user)
         db.commit()
         db.refresh(user)
 
-        # Envia senha temporária
-        enviar_email_senha_temporaria(user, senha_temp)
+        # monta link de primeiro acesso
+        reset_link = f"{FRONT_RESET_URL}?token={token}"
+
+        html = f"""
+        <p>Olá, {user.nome}!</p>
+        <p>Identificamos que você já era cliente PEG do Brasil.</p>
+        <p>Para ativar seu acesso ao <strong>Painel de Afiliados</strong>,
+        clique no link abaixo e defina sua senha:</p>
+        <p><a href="{reset_link}">{reset_link}</a></p>
+        <p>Este link é válido por 24 horas.</p>
+        <p>Se você não solicitou este acesso, ignore este e-mail.</p>
+        """
+
+        try:
+            send_email(
+                to_email=user.email,
+                subject="Ative seu acesso ao Painel de Afiliados PEG do Brasil",
+                html_body=html,
+            )
+        except Exception as exc:
+            print(f"[WARN] Erro ao enviar e-mail de primeiro acesso: {exc}")
 
         return {
             "status": "success",
-            "message": "Cadastro realizado (cliente já existia no ERP). Senha temporária enviada.",
-            "id": user.id,
+            "message": "Cadastro localizado na Rein. Enviamos um link para seu e-mail para definir a senha.",
         }
 
-    # ----------------------------------------------------------------
-    # CASO B: Cliente NÃO existe no ERP → cria na REIN
-    # ----------------------------------------------------------------
+    # =================================================================
+    # CASO B: NÃO EXISTE NA REIN → cria cliente na Rein + senha escolhida
+    # =================================================================
     try:
-        rein_id = rein_client.criar_cliente_rein(
-            {
-                "cpf_cnpj": documento,
-                "tipo_pessoa": data.tipo_pessoa,
-                "nome": data.nome,
-                "email": data.email,
-                "telefone": data.telefone,
-                "cep": data.cep,
-                "endereco": data.endereco,
-                "numero": data.numero,
-                "bairro": data.bairro,
-                "cidade": data.cidade,
-                "estado": data.estado,
-            }
-        )
+        rein_id = criar_cliente_rein({
+            "cpf_cnpj": documento,
+            "tipo_pessoa": data.tipo_pessoa,
+            "nome": data.nome,
+            "email": data.email,
+            "telefone": data.telefone,
+            "cep": data.cep,
+            "endereco": data.endereco,
+            "numero": data.numero,
+            "bairro": data.bairro,
+            "cidade": data.cidade,
+            "estado": data.estado,
+        })
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na REIN: {exc}")
+        raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na Rein: {exc}")
 
-    # Hash da senha normal escolhida pelo afiliado
     senha_hash = pwd_context.hash(data.senha)
 
-    # Cria o usuário local vinculado
     user = Usuario(
-        tipo_pessoa=data.tipo_pessoa,
+        tipo_pessoa=data.tipo_pessoa.upper(),
         cpf_cnpj=documento,
         nome=data.nome,
         email=data.email,
@@ -210,17 +225,18 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         senha_hash=senha_hash,
         rein_pessoa_id=rein_id,
         first_login_must_change=False,
+        reset_token=None,
+        reset_token_expires_at=None,
     )
 
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    enviar_email_boas_vindas(user)
-
+    # opcional: e-mail de boas-vindas
     return {
         "status": "success",
-        "message": "Cadastro criado com sucesso na REIN e vinculado ao afiliado!",
+        "message": "Cadastro criado na Rein e no Painel.",
         "id": user.id,
     }
 
