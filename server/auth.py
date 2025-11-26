@@ -74,70 +74,100 @@ def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
 # ==============
 
 
-@router.post("/register", response_model=schemas.UsuarioOut)
+@router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    """Cadastro de afiliado integrado à REIN."""
+    """
+    Cadastro com integração à REIN.
+    FLUXOS:
+    
+    A) Se CPF/CNPJ já existir na REIN → NÃO cria na Rein
+       - Cria somente o usuário local
+       - Gera senha temporária
+       - Marca first_login_must_change = True
+       - Envia senha temporária por e-mail
 
-    # ------------------------------
-    # Trata CPF/CNPJ
-    # ------------------------------
-    documento = "".join(filter(str.isdigit, data.cpf_cnpj or ""))
+    B) Se CPF/CNPJ NÃO existir na REIN → cria pessoa na Rein
+       - Usa a senha digitada pelo afiliado
+       - Marca first_login_must_change = False
+       - Envia e-mail normal de boas-vindas
+    """
 
-    if len(documento) == 11:
-        tipo_pessoa = "PF"
-    elif len(documento) == 14:
-        tipo_pessoa = "PJ"
-    else:
-        raise HTTPException(400, "CPF/CNPJ inválido.")
+    # ---- Normalização do documento ----
+    documento = re.sub(r"\D", "", data.cpf_cnpj)
 
-    # ------------------------------
-    # Verifica duplicidade local
-    # ------------------------------
+    # ---- Verificar duplicidade no PAINEL ----
     if db.query(Usuario).filter(Usuario.email == data.email).first():
-        raise HTTPException(400, "E-mail já cadastrado.")
+        raise HTTPException(status_code=400, detail="E-mail já cadastrado")
 
     if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
-        raise HTTPException(400, "CPF/CNPJ já cadastrado.")
+        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
 
-    # ------------------------------
-    # Consulta Pessoa na Rein
-    # ------------------------------
-    try:
-        pessoa = rein_client.buscar_pessoa_por_documento(
+    # ---- 1) CONSULTAR NA REIN ----
+    pessoa_existente_id = buscar_pessoa_por_documento(documento)
+
+    # ----------------------------------------------------------------
+    # CASO A: Cliente já existe no ERP → cria usuário local + senha provisória
+    # ----------------------------------------------------------------
+    if pessoa_existente_id:
+        senha_temp = gerar_senha_aleatoria()
+        senha_hash = pwd_context.hash(senha_temp)
+
+        user = Usuario(
+            tipo_pessoa=data.tipo_pessoa,
             cpf_cnpj=documento,
-            tipo_pessoa=tipo_pessoa
+            nome=data.nome,
+            email=data.email,
+            telefone=data.telefone,
+            cep=data.cep,
+            endereco=data.endereco,
+            numero=data.numero,
+            bairro=data.bairro,
+            cidade=data.cidade,
+            estado=data.estado,
+            senha_hash=senha_hash,
+            rein_pessoa_id=pessoa_existente_id,
+            first_login_must_change=True,
         )
-    except Exception as e:
-        raise HTTPException(500, f"Erro ao consultar cliente na Rein: {e}")
 
-    # ------------------------------
-    # Se existe na Rein → reaproveita
-    # Se não existe → cria
-    # ------------------------------
-    if pessoa:
-        pessoa_id = pessoa.get("Id") or pessoa.get("intId") or pessoa.get("id")
-        if not pessoa_id:
-            raise HTTPException(500, "Cliente existente na Rein sem ID válido.")
-        rein_pessoa_id = int(pessoa_id)
-    else:
-        try:
-            rein_pessoa_id = rein_client.get_or_create_pessoa_rein(
-                {
-                    "tipo_pessoa": tipo_pessoa,
-                    "cpf_cnpj": documento,
-                    "nome": data.nome
-                }
-            )
-        except Exception as e:
-            raise HTTPException(500, f"Erro ao criar cliente na Rein: {e}")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    # ------------------------------
-    # Criação local do afiliado
-    # ------------------------------
-    senha_hash = _hash_password(data.senha)
+        # Envia senha temporária
+        enviar_email_senha_temporaria(user, senha_temp)
 
-    novo = Usuario(
-        tipo_pessoa=tipo_pessoa,
+        return {
+            "status": "success",
+            "message": "Cadastro realizado (cliente já existia no ERP). Senha temporária enviada.",
+            "id": user.id,
+        }
+
+    # ----------------------------------------------------------------
+    # CASO B: Cliente NÃO existe no ERP → cria na REIN
+    # ----------------------------------------------------------------
+    try:
+        rein_id = get_or_create_pessoa_rein({
+            "cpf_cnpj": documento,
+            "tipo_pessoa": data.tipo_pessoa,
+            "nome": data.nome,
+            "email": data.email,
+            "telefone": data.telefone,
+            "cep": data.cep,
+            "endereco": data.endereco,
+            "numero": data.numero,
+            "bairro": data.bairro,
+            "cidade": data.cidade,
+            "estado": data.estado,
+        })
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na REIN: {exc}")
+
+    # Hash da senha normal escolhida pelo afiliado
+    senha_hash = pwd_context.hash(data.senha)
+
+    # Cria o usuário local vinculado
+    user = Usuario(
+        tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=documento,
         nome=data.nome,
         email=data.email,
@@ -149,18 +179,21 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         cidade=data.cidade,
         estado=data.estado,
         senha_hash=senha_hash,
-        rein_pessoa_id=rein_pessoa_id,
+        rein_pessoa_id=rein_id,
         first_login_must_change=False,
     )
 
-    db.add(novo)
+    db.add(user)
     db.commit()
-    db.refresh(novo)
+    db.refresh(user)
 
-    enviar_email_boas_vindas(novo)
+    enviar_email_boas_vindas(user)
 
-    return novo
-
+    return {
+        "status": "success",
+        "message": "Cadastro criado com sucesso na REIN e vinculado ao afiliado!",
+        "id": user.id,
+    }
 
 # ==========
 # ROTAS LOGIN
