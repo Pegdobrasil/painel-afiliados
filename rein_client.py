@@ -319,3 +319,4 @@ def listar_pedidos_por_cliente(rein_pessoa_id: int) -> List[Dict[str, Any]]:
     resp.raise_for_status()
     data = resp.json() or {}
     return _extract_items(data)
+
