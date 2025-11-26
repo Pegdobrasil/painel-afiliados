@@ -40,6 +40,35 @@ function limparFormulario() {
 
   msg("");
 }
+async function login() {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+
+    const resp = await fetch(API_BASE + "/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, senha })
+    });
+
+    const data = await resp.json();
+
+    if (data.status === "change_password_required") {
+        localStorage.setItem("pending_user_id", data.user_id);
+        window.location.href = "trocar_senha.html";
+        return;
+    }
+
+    if (data.status !== "success") {
+        alert(data.message || "Erro ao fazer login");
+        return;
+    }
+
+    // Login normal
+    localStorage.setItem("session_token", data.token);
+    localStorage.setItem("user_id", data.user_id);
+
+    window.location.href = "painel.html";
+}
 
 // voltar para login (ou outra página)
 function voltarLogin() {
