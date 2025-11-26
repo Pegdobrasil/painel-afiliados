@@ -8,6 +8,9 @@ from . import schemas
 from .email_config import send_email
 
 import rein_client
+import re
+import secrets
+import string
 
 # Garante que as tabelas existam ao subir a aplicação
 Base.metadata.create_all(bind=engine)
@@ -19,14 +22,17 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 # =========================
 # Helpers de senha / e-mail
 # =========================
-
-
 def _hash_password(senha: str) -> str:
     return pwd_context.hash(senha)
 
 
 def _verify_password(senha: str, senha_hash: str) -> bool:
     return pwd_context.verify(senha, senha_hash)
+
+
+def gerar_senha_aleatoria(tamanho: int = 8) -> str:
+    caracteres = string.ascii_letters + string.digits
+    return "".join(secrets.choice(caracteres) for _ in range(tamanho))
 
 
 def enviar_email_boas_vindas(usuario: Usuario) -> None:
@@ -45,7 +51,6 @@ def enviar_email_boas_vindas(usuario: Usuario) -> None:
             html_body=html,
         )
     except Exception as exc:
-        # Não vamos quebrar o cadastro por erro de e-mail
         print(f"[WARN] Erro ao enviar e-mail de boas-vindas: {exc}")
 
 
@@ -69,6 +74,27 @@ def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
         print(f"[WARN] Erro ao enviar e-mail de nova senha: {exc}")
 
 
+def enviar_email_senha_temporaria(usuario: Usuario, senha_plana: str) -> None:
+    """E-mail usado quando o cliente já existia na REIN e ganhou acesso ao painel."""
+    try:
+        html = f"""
+        <p>Olá, {usuario.nome}!</p>
+        <p>Identificamos que você já era cliente PEG do Brasil em nosso sistema interno.</p>
+        <p>Criamos seu acesso ao <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
+        <p>Senha temporária de acesso: <strong>{senha_plana}</strong></p>
+        <p>No primeiro login, você será direcionado para criar uma nova senha definitiva.</p>
+        <p>Se você não reconhece este acesso, responda este e-mail imediatamente.</p>
+        <p>Atenciosamente,<br>Equipe PEG do Brasil</p>
+        """
+        send_email(
+            to_email=usuario.email,
+            subject="Acesso ao Painel de Afiliados - senha temporária",
+            html_body=html,
+        )
+    except Exception as exc:
+        print(f"[WARN] Erro ao enviar e-mail de senha temporária: {exc}")
+
+
 # ==============
 # ROTAS: CADASTRO
 # ==============
@@ -78,8 +104,9 @@ def enviar_email_nova_senha(usuario: Usuario, senha_plana: str) -> None:
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     """
     Cadastro com integração à REIN.
+
     FLUXOS:
-    
+
     A) Se CPF/CNPJ já existir na REIN → NÃO cria na Rein
        - Cria somente o usuário local
        - Gera senha temporária
@@ -103,7 +130,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado")
 
     # ---- 1) CONSULTAR NA REIN ----
-    pessoa_existente_id = buscar_pessoa_por_documento(documento)
+    pessoa_existente_id = rein_client.buscar_pessoa_por_documento(documento)
 
     # ----------------------------------------------------------------
     # CASO A: Cliente já existe no ERP → cria usuário local + senha provisória
@@ -146,19 +173,21 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     # CASO B: Cliente NÃO existe no ERP → cria na REIN
     # ----------------------------------------------------------------
     try:
-        rein_id = get_or_create_pessoa_rein({
-            "cpf_cnpj": documento,
-            "tipo_pessoa": data.tipo_pessoa,
-            "nome": data.nome,
-            "email": data.email,
-            "telefone": data.telefone,
-            "cep": data.cep,
-            "endereco": data.endereco,
-            "numero": data.numero,
-            "bairro": data.bairro,
-            "cidade": data.cidade,
-            "estado": data.estado,
-        })
+        rein_id = rein_client.criar_cliente_rein(
+            {
+                "cpf_cnpj": documento,
+                "tipo_pessoa": data.tipo_pessoa,
+                "nome": data.nome,
+                "email": data.email,
+                "telefone": data.telefone,
+                "cep": data.cep,
+                "endereco": data.endereco,
+                "numero": data.numero,
+                "bairro": data.bairro,
+                "cidade": data.cidade,
+                "estado": data.estado,
+            }
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na REIN: {exc}")
 
@@ -195,6 +224,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         "id": user.id,
     }
 
+
 # ==========
 # ROTAS LOGIN
 # ==========
@@ -202,11 +232,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(data: schemas.Login, db: Session = Depends(get_db)):
-    usuario = (
-        db.query(Usuario)
-        .filter(Usuario.email == data.email)
-        .first()
-    )
+    usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
 
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos")
@@ -219,7 +245,7 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
         return {
             "status": "change_password_required",
             "message": "É necessário criar uma nova senha antes de acessar.",
-            "user_id": usuario.id
+            "user_id": usuario.id,
         }
 
     # Login normal
@@ -229,7 +255,7 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
         "status": "success",
         "token": token,
         "user_id": usuario.id,
-        "message": "Login realizado com sucesso"
+        "message": "Login realizado com sucesso",
     }
 
 
@@ -240,10 +266,7 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
 
 @router.post("/recover")
 def recuperar_senha(data: schemas.PasswordReset, db: Session = Depends(get_db)):
-    """Redefine a senha a partir do e-mail informado.
-
-    Usado pelo auth.js (recuperarConta).
-    """
+    """Redefine a senha a partir do e-mail informado."""
     usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not usuario:
         raise HTTPException(status_code=400, detail="E-mail não encontrado.")
@@ -258,9 +281,11 @@ def recuperar_senha(data: schemas.PasswordReset, db: Session = Depends(get_db)):
     return {"status": "ok", "message": "Senha redefinida com sucesso."}
 
 
-# ========================
-# ROTAS: SALDO E PEDIDOS
-# ========================
+# =====================
+# ROTAS: TROCA DE SENHA (primeiro acesso)
+# =====================
+
+
 @router.post("/change-password")
 def change_password(data: schemas.ChangePassword, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.id == data.user_id).first()
@@ -268,7 +293,6 @@ def change_password(data: schemas.ChangePassword, db: Session = Depends(get_db))
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    # Atualiza senha
     usuario.senha_hash = pwd_context.hash(data.nova_senha)
     usuario.first_login_must_change = False
 
@@ -277,17 +301,15 @@ def change_password(data: schemas.ChangePassword, db: Session = Depends(get_db))
 
     return {
         "status": "success",
-        "message": "Senha alterada com sucesso, agora você já pode acessar o painel."
+        "message": "Senha alterada com sucesso, agora você já pode acessar o painel.",
     }
 
 
+# ========================
+# ROTAS: SALDO E PEDIDOS (usando stub de pedidos por enquanto)
+# ========================
 @router.get("/saldo/{afiliado_id}")
 def saldo_afiliado(afiliado_id: int, db: Session = Depends(get_db)):
-    """Retorna o 'saldo' do afiliado.
-
-    Por enquanto, usamos a soma dos valores dos pedidos na REIN
-    como total movimentado. Depois dá para trocar para carteira real.
-    """
     usuario = db.query(Usuario).filter(Usuario.id == afiliado_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Afiliado não encontrado.")
@@ -316,13 +338,6 @@ def saldo_afiliado(afiliado_id: int, db: Session = Depends(get_db)):
 
 @router.get("/pedidos/{afiliado_id}")
 def listar_pedidos(afiliado_id: int, db: Session = Depends(get_db)):
-    """Lista pedidos do afiliado (cliente) na REIN.
-
-    Retorna em formato simplificado, já no padrão esperado pelo painel.js:
-    - codigoPedido
-    - valorTotal
-    - dataCriacao
-    """
     usuario = db.query(Usuario).filter(Usuario.id == afiliado_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Afiliado não encontrado.")
@@ -340,18 +355,13 @@ def listar_pedidos(afiliado_id: int, db: Session = Depends(get_db)):
 
     saida = []
     for p in pedidos or []:
-        cod = (
-            p.get("Codigo")
-            or p.get("CodigoPedido")
-            or p.get("Id")
-            or p.get("intId")
-        )
+        cod = p.get("Codigo") or p.get("CodigoPedido") or p.get("Id") or p.get("intId")
         try:
             val = float(p.get("ValorTotal") or p.get("Valor") or 0)
         except Exception:
             val = 0.0
 
-        data = (
+        data_criacao = (
             p.get("DataCriacao")
             or p.get("DataEmissao")
             or p.get("DataCadastro")
@@ -362,7 +372,7 @@ def listar_pedidos(afiliado_id: int, db: Session = Depends(get_db)):
             {
                 "codigoPedido": cod,
                 "valorTotal": val,
-                "dataCriacao": data,
+                "dataCriacao": data_criacao,
             }
         )
 
