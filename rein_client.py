@@ -1,41 +1,7 @@
-import requests
 import re
-from datetime import datetime
-import hashlib
-import hmac
+import requests
 
-BASE_URL = "https://api.rein.net.br/api/v1"
-DATABASE = "pegdobrasil"
-CLIENT_ID = "7e49-e62a-a2c6-cc84"
-CLIENT_SECRET = "1a5a9c0e681c42a4944d911ee0c5b9be16274d38eb90986a33e3f4dc119f47c3"  # coloque a sua chave real aqui
-
-
-def gerar_assinatura(endpoint: str):
-    """
-    Gera assinatura HMAC baseada no exemplo do Postman:
-    endpoint.Database.Timestamp
-    """
-    timestamp = str(int(datetime.utcnow().timestamp()) + 300)
-    data = f"{endpoint}.{DATABASE}.{timestamp}"
-
-    assinatura = hmac.new(
-        CLIENT_SECRET.encode(),
-        data.encode(),
-        hashlib.sha256,
-    ).hexdigest()
-
-    return assinatura, timestamp
-
-
-def _default_headers(endpoint: str):
-    token, timestamp = gerar_assinatura(endpoint)
-    return {
-        "Content-Type": "application/json",
-        "Token": token,
-        "Database": DATABASE,
-        "Timestamp": timestamp,
-        "ClientId": CLIENT_ID,
-    }
+from config import REIN_BASE, rein_headers  # usa o MESMO header dos outros scripts
 
 
 # ----------------------------------------------------------
@@ -57,17 +23,19 @@ def aplicar_mascara_documento(doc: str) -> str:
 def buscar_pessoa_por_documento(documento: str):
     """
     Retorna o ID da pessoa na REIN, ou None se não encontrar.
+    Usa o mesmo esquema de token/headers do config.py.
     """
-    endpoint = "/pessoa"
-    headers = _default_headers(endpoint)
+    endpoint_path = "/api/v1/pessoa"  # caminho completo para assinar e chamar
+    headers = rein_headers(endpoint_path)
 
     termo = aplicar_mascara_documento(documento)
     params = {"page": 1, "termo": termo}
 
-    response = requests.get(BASE_URL + endpoint, headers=headers, params=params, timeout=20)
-    response.raise_for_status()
+    url = f"{REIN_BASE}{endpoint_path}"
+    resp = requests.get(url, headers=headers, params=params, timeout=20)
+    resp.raise_for_status()
 
-    data = response.json()
+    data = resp.json()
     itens = data.get("data", {}).get("items") or []
 
     if not itens:
@@ -99,8 +67,9 @@ def criar_cliente_rein(usuario_data: dict) -> int:
     doc_digits = re.sub(r"\D", "", doc_mascarado)
     tipo_rein = "F" if len(doc_digits) == 11 else "J"
 
-    endpoint = "/pessoa"
-    headers = _default_headers(endpoint)
+    endpoint_path = "/api/v1/pessoa"
+    headers = rein_headers(endpoint_path)
+    url = f"{REIN_BASE}{endpoint_path}"
 
     payload = {
         "intCanalVendaId": 4,
@@ -187,12 +156,10 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         },
     }
 
-    response = requests.put(BASE_URL + endpoint, json=payload, headers=headers, timeout=20)
-    response.raise_for_status()
+    resp = requests.put(url, json=payload, headers=headers, timeout=20)
+    resp.raise_for_status()
 
-    data = response.json()
-    # Exemplo que você mostrou:
-    # {"status": 200, "data": {"Id": 155816, "Nome": "...", "sucesso": True}}
+    data = resp.json()
     inner = data.get("data") or data
     pessoa_id = inner.get("Id") or inner.get("intId") or inner.get("id")
 
