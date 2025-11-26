@@ -18,6 +18,9 @@ class UsuarioCreate(BaseModel):
     estado: str
     senha: str
 
+class ChangePasswordToken(BaseModel):
+    token: str
+    nova_senha: str
 
 class UsuarioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
