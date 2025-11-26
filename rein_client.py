@@ -5,8 +5,7 @@ import config
 
 session = requests.Session()
 
-EP_LIST = "/api/v1/produto"         # GET ?page=1&termo={sku}
-# detalhe usa /api/v1/produto/{id}
+EP_LIST = "/api/v1/produto"  # GET ?page=1&termo={sku}
 
 
 # ============================================================
@@ -16,6 +15,52 @@ EP_LIST = "/api/v1/produto"         # GET ?page=1&termo={sku}
 def _get(path: str, **kw):
     url = f"{config.REIN_BASE}{path}"
     return session.get(url, headers=config.rein_headers(path), timeout=60, **kw)
+
+
+def _put(path: str, json: Optional[Dict[str, Any]] = None, **kw):
+    url = f"{config.REIN_BASE}{path}"
+    return session.put(
+        url,
+        headers=config.rein_headers(path),
+        json=json,
+        timeout=60,
+        **kw,
+    )
+
+
+# ============================================================
+# HELPERS DE DOCUMENTO (CPF / CNPJ)
+# ============================================================
+
+def somente_digitos(valor: str) -> str:
+    return "".join(filter(str.isdigit, valor or ""))
+
+
+def formatar_documento(cpf_cnpj: str) -> str:
+    """
+    Aplica máscara no documento para buscar na REIN.
+    - 11 dígitos -> 000.000.000-00
+    - 14 dígitos -> 00.000.000/0000-00
+    """
+    d = somente_digitos(cpf_cnpj)
+    if len(d) == 11:
+        return f"{d[0:3]}.{d[3:6]}.{d[6:9]}-{d[9:11]}"
+    if len(d) == 14:
+        return f"{d[0:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:14]}"
+    return cpf_cnpj  # se vier algo estranho, devolve como está
+
+
+def detectar_tipo_pessoa_por_documento(cpf_cnpj: str) -> str:
+    """
+    Retorna 'F' para pessoa física, 'J' para jurídica.
+    Baseado no número de dígitos do documento.
+    """
+    d = somente_digitos(cpf_cnpj)
+    if len(d) == 11:
+        return "F"
+    if len(d) == 14:
+        return "J"
+    raise ValueError("CPF/CNPJ inválido.")
 
 
 # ============================================================
@@ -33,9 +78,7 @@ def _parse_locais(grade: Dict[str, Any]) -> List[Dict[str, Any]]:
             {
                 "id": lobj.get("Id") or l.get("LocalId"),
                 "nome": lobj.get("Nome") or "Sem nome",
-                "saldo": float(
-                    l.get("EstoqueDisponivel") or l.get("Saldo") or 0
-                ),
+                "saldo": float(l.get("EstoqueDisponivel") or l.get("Saldo") or 0),
                 "margens": [
                     {
                         "tabela": (m.get("TabelaPreco") or {}).get("Nome") or "",
@@ -117,7 +160,6 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
     r2.raise_for_status()
     det = (r2.json() or {}).get("data") or {}
 
-    # tenta achar a mesma grade dentro do detalhe (para pegar locais/preços atualizados)
     grade2 = None
     for g in (det.get("ProdutoGrade") or []):
         if str(g.get("Sku")) == str(sku):
@@ -168,7 +210,6 @@ def _extract_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
     d = data.get("data")
     if isinstance(d, dict):
-        # formato paginado {"data":{"items":[...]}}
         items = d.get("items")
         if isinstance(items, list):
             return items
@@ -177,40 +218,28 @@ def _extract_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _put(path: str, json: Optional[Dict[str, Any]] = None, **kw):
-    """Wrapper simples para PUT na API da REIN."""
-    url = f"{config.REIN_BASE}{path}"
-    return session.put(
-        url,
-        headers=config.rein_headers(path),
-        json=json,
-        timeout=60,
-        **kw,
-    )
-
-
 def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dict[str, Any]]:
     """
-    Busca uma pessoa na REIN filtrando por CPF/CNPJ e tipo (PF/PJ).
-    Usa sua regra: 11 dígitos = PF, 14 dígitos = PJ.
-    """
-    documento = "".join(filter(str.isdigit, cpf_cnpj or ""))
-    tipo = (tipo_pessoa or "").strip().upper()
+    Busca uma pessoa na REIN filtrando por CPF/CNPJ e tipo (F/J).
 
-    # força PF/PJ mesmo se o front mandar vazio ou errado
-    if len(documento) == 11:
-        tipo_auto = "PF"
-    elif len(documento) == 14:
-        tipo_auto = "PJ"
-    else:
+    A Rein está esperando o termo COM máscara:
+    - Ex.: 102.524.679-90 (não 10252467990)
+    """
+    documento_mascarado = formatar_documento(cpf_cnpj)
+    # TipoPessoa da API: 'F' ou 'J'
+    try:
+        tipo_auto = detectar_tipo_pessoa_por_documento(cpf_cnpj)
+    except ValueError:
         tipo_auto = None
 
+    tipo_param = tipo_auto or (tipo_pessoa or "").strip().upper()
+
     params = {
-        "tipoPessoa": tipo_auto or tipo or "",
+        "tipoPessoa": tipo_param,       # F ou J
         "status": "ativo",
         "tipoCliente": "cliente",
         "page": 1,
-        "termo": documento,
+        "termo": documento_mascarado,   # << com máscara
     }
 
     resp = _get("/api/v1/pessoa", params=params)
@@ -222,28 +251,32 @@ def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dic
 def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Monta o JSON mínimo para cadastro de Pessoa na REIN a partir dos dados do afiliado.
-    Respeita a regra:
-    - 11 dígitos = PF (Cpf)
-    - 14 dígitos = PJ (Cnpj)
+    - 11 dígitos = pessoa física (TipoPessoa = 'F', campo Cpf)
+    - 14 dígitos = pessoa jurídica (TipoPessoa = 'J', campo Cnpj)
     """
-    cpf_cnpj = "".join(filter(str.isdigit, usuario_data.get("cpf_cnpj") or ""))
+    cpf_cnpj_raw = usuario_data.get("cpf_cnpj") or ""
+    d = somente_digitos(cpf_cnpj_raw)
     nome = usuario_data.get("nome") or ""
 
-    if len(cpf_cnpj) == 11:
-        tipo_pessoa = "PF"
-        is_pf = True
-    elif len(cpf_cnpj) == 14:
-        tipo_pessoa = "PJ"
-        is_pf = False
+    if len(d) == 11:
+        tipo_pessoa_api = "F"
+        cpf_formatado = formatar_documento(d)
+        cpf_field = cpf_formatado
+        cnpj_field = None
+    elif len(d) == 14:
+        tipo_pessoa_api = "J"
+        cnpj_formatado = formatar_documento(d)
+        cpf_field = None
+        cnpj_field = cnpj_formatado
     else:
         raise ValueError("CPF/CNPJ inválido para cadastro da Pessoa na Rein.")
 
     payload: Dict[str, Any] = {
-        "TipoPessoa": tipo_pessoa,
+        "TipoPessoa": tipo_pessoa_api,  # F ou J (padrão da Rein)
         "Nome": nome,
-        "RazaoSocial": None if is_pf else nome,
-        "Cpf": cpf_cnpj if is_pf else None,
-        "Cnpj": cpf_cnpj if not is_pf else None,
+        "RazaoSocial": nome if tipo_pessoa_api == "J" else None,
+        "Cpf": cpf_field,
+        "Cnpj": cnpj_field,
         "TipoCliente": "cliente",
         "Status": 1,
         "CadastroGeralEmail": [],
@@ -254,7 +287,9 @@ def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[st
 
 
 def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
-    """Cria uma pessoa na REIN via PUT /api/v1/pessoa e retorna o ID criado."""
+    """
+    Cria uma pessoa na REIN via PUT /api/v1/pessoa e retorna o ID criado.
+    """
     resp = _put("/api/v1/pessoa", json=payload)
     resp.raise_for_status()
     data = resp.json() or {}
@@ -269,19 +304,21 @@ def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
 def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
     """
     Garante que exista uma Pessoa na REIN para este afiliado e retorna o ID.
-    - Se já existir (CPF/CNPJ+PF/PJ), reaproveita.
+    - Se já existir (CPF/CNPJ+tipo), reaproveita.
     - Se não existir, cria usando montar_payload_pessoa_para_cadastro.
     """
-    cpf_cnpj = "".join(filter(str.isdigit, usuario_data.get("cpf_cnpj") or ""))
-    if len(cpf_cnpj) == 11:
-        tipo_pessoa = "PF"
-    elif len(cpf_cnpj) == 14:
-        tipo_pessoa = "PJ"
+    cpf_cnpj_raw = usuario_data.get("cpf_cnpj") or ""
+    d = somente_digitos(cpf_cnpj_raw)
+
+    if len(d) == 11:
+        tipo_pessoa = "F"
+    elif len(d) == 14:
+        tipo_pessoa = "J"
     else:
         raise ValueError("CPF/CNPJ inválido.")
 
     existente = buscar_pessoa_por_documento(
-        cpf_cnpj=cpf_cnpj,
+        cpf_cnpj=d,
         tipo_pessoa=tipo_pessoa,
     )
     if existente:
@@ -297,7 +334,7 @@ def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
         return int(pessoa_id)
 
     payload = montar_payload_pessoa_para_cadastro(
-        {"cpf_cnpj": cpf_cnpj, "nome": usuario_data.get("nome")}
+        {"cpf_cnpj": d, "nome": usuario_data.get("nome")}
     )
     return criar_pessoa_na_rein(payload)
 
@@ -319,4 +356,3 @@ def listar_pedidos_por_cliente(rein_pessoa_id: int) -> List[Dict[str, Any]]:
     resp.raise_for_status()
     data = resp.json() or {}
     return _extract_items(data)
-
