@@ -9,7 +9,7 @@ class UsuarioCreate(BaseModel):
     cpf_cnpj: str
     nome: str
     email: str
-    telefone: str
+    telefone: str | None = None  # agora opcional
     cep: str
     endereco: str
     numero: str
