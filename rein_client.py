@@ -250,59 +250,6 @@ def buscar_pessoa_por_documento(cpf_cnpj: str, tipo_pessoa: str) -> Optional[Dic
 
 def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Monta o JSON mínimo para cadastro de Pessoa na REIN a partir dos dados do afiliado.
-    - 11 dígitos = pessoa física (TipoPessoa = 'F', campo Cpf)
-    - 14 dígitos = pessoa jurídica (TipoPessoa = 'J', campo Cnpj)
-    """
-    cpf_cnpj_raw = usuario_data.get("cpf_cnpj") or ""
-    d = somente_digitos(cpf_cnpj_raw)
-    nome = usuario_data.get("nome") or ""
-
-    if len(d) == 11:
-        tipo_pessoa_api = "F"
-        cpf_formatado = formatar_documento(d)
-        cpf_field = cpf_formatado
-        cnpj_field = None
-    elif len(d) == 14:
-        tipo_pessoa_api = "J"
-        cnpj_formatado = formatar_documento(d)
-        cpf_field = None
-        cnpj_field = cnpj_formatado
-    else:
-        raise ValueError("CPF/CNPJ inválido para cadastro da Pessoa na Rein.")
-
-    payload: Dict[str, Any] = {
-        "TipoPessoa": tipo_pessoa_api,  # F ou J (padrão da Rein)
-        "Nome": nome,
-        "RazaoSocial": nome if tipo_pessoa_api == "J" else None,
-        "Cpf": cpf_field,
-        "Cnpj": cnpj_field,
-        "TipoCliente": "cliente",
-        "Status": 1,
-        "CadastroGeralEmail": [],
-        "CadastroGeralEndereco": [],
-        "Observacao": "Cadastro criado automaticamente pelo painel de afiliados.",
-    }
-    return payload
-
-
-def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
-    """
-    Cria uma pessoa na REIN via PUT /api/v1/pessoa e retorna o ID criado.
-    """
-    resp = _put("/api/v1/pessoa", json=payload)
-    resp.raise_for_status()
-    data = resp.json() or {}
-    pessoa_id = data.get("intId") or data.get("Id") or data.get("id")
-    if not pessoa_id:
-        raise RuntimeError(
-            f"Não foi possível obter o ID da pessoa criada na Rein: {data}"
-        )
-    return int(pessoa_id)
-
-
-def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
     Monta o JSON completo para cadastro de Pessoa na REIN a partir dos dados do afiliado.
 
     Regra:
@@ -377,7 +324,7 @@ def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[st
     if telefone:
         cadastro_telefones.append(
             {
-                "Id": 5,
+                "Id": 0,
                 "TipoCadastroId": 0,
                 "Nome": "Principal",
                 "Principal": True,
@@ -433,6 +380,72 @@ def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[st
 
     return payload
 
+    payload: Dict[str, Any] = {
+        "TipoPessoa": tipo_pessoa_api,  # F ou J (padrão da Rein)
+        "Nome": nome,
+        "RazaoSocial": nome if tipo_pessoa_api == "J" else None,
+        "Cpf": cpf_field,
+        "Cnpj": cnpj_field,
+        "TipoCliente": "cliente",
+        "Status": 1,
+        "CadastroGeralEmail": [],
+        "CadastroGeralEndereco": [],
+        "Observacao": "Cadastro criado automaticamente pelo painel de afiliados.",
+    }
+    return payload
+
+
+def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
+    """
+    Cria uma pessoa na REIN via PUT /api/v1/pessoa e retorna o ID criado.
+    """
+    resp = _put("/api/v1/pessoa", json=payload)
+    resp.raise_for_status()
+    data = resp.json() or {}
+    pessoa_id = data.get("intId") or data.get("Id") or data.get("id")
+    if not pessoa_id:
+        raise RuntimeError(
+            f"Não foi possível obter o ID da pessoa criada na Rein: {data}"
+        )
+    return int(pessoa_id)
+
+
+def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
+    """
+    Garante que exista uma Pessoa na REIN para este afiliado e retorna o ID.
+    - Se já existir (CPF/CNPJ+tipo), reaproveita.
+    - Se não existir, cria usando montar_payload_pessoa_para_cadastro.
+    """
+    cpf_cnpj_raw = usuario_data.get("cpf_cnpj") or ""
+    d = somente_digitos(cpf_cnpj_raw)
+
+    if len(d) == 11:
+        tipo_pessoa = "F"
+    elif len(d) == 14:
+        tipo_pessoa = "J"
+    else:
+        raise ValueError("CPF/CNPJ inválido.")
+
+    existente = buscar_pessoa_por_documento(
+        cpf_cnpj=d,
+        tipo_pessoa=tipo_pessoa,
+    )
+    if existente:
+        pessoa_id = (
+            existente.get("Id")
+            or existente.get("intId")
+            or existente.get("id")
+        )
+        if not pessoa_id:
+            raise RuntimeError(
+                f"Pessoa encontrada na Rein sem ID válido: {existente}"
+            )
+        return int(pessoa_id)
+
+    payload = montar_payload_pessoa_para_cadastro(
+        {"cpf_cnpj": d, "nome": usuario_data.get("nome")}
+    )
+    return criar_pessoa_na_rein(payload)
 
 
 # ============================================================
@@ -452,4 +465,3 @@ def listar_pedidos_por_cliente(rein_pessoa_id: int) -> List[Dict[str, Any]]:
     resp.raise_for_status()
     data = resp.json() or {}
     return _extract_items(data)
-
