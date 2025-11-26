@@ -90,133 +90,120 @@ async function registrar() {
 }
 
 // LOGIN — ★ CORRIGIDO ★
-async function login() {
-  const email = v("email");
-  const senha = v("senha");
+async function api(url, method = "GET", body = null) {
+    const opts = {
+        method,
+        headers: { "Content-Type": "application/json" }
+    };
+    if (body) opts.body = JSON.stringify(body);
 
-  if (!email || !senha) {
-    notify("Informe email e senha.");
-    return;
-  }
+    const resp = await fetch(url, opts);
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, senha }),
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      notify(data?.detail || "Não foi possível fazer login.");
-      return;
+    if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || resp.statusText);
     }
 
-    // Primeiro acesso — força troca de senha
-   if (data.status === "change_password_required") {
-  alert("Primeiro acesso: verifique seu e-mail. Enviamos um link para você criar uma nova senha.");
-  return;
+    return resp.json();
 }
 
 
-    if (data.status !== "success") {
-      notify(data.message || "Erro ao fazer login.");
-      return;
+// =====================
+// CADASTRO
+// =====================
+async function salvarCadastro() {
+    const data = {
+        tipo_pessoa: document.getElementById("tipo_pessoa").value,
+        cpf_cnpj: document.getElementById("cpf_cnpj").value,
+        nome: document.getElementById("nome").value,
+        email: document.getElementById("email").value,
+        telefone: document.getElementById("telefone").value,
+        cep: document.getElementById("cep").value,
+        endereco: document.getElementById("endereco").value,
+        numero: document.getElementById("numero").value,
+        bairro: document.getElementById("bairro").value,
+        cidade: document.getElementById("cidade").value,
+        estado: document.getElementById("estado").value,
+        senha: document.getElementById("senha").value
+    };
+
+    try {
+        const r = await api(
+            "https://painel-afiliados-production.up.railway.app/api/auth/register",
+            "POST",
+            data
+        );
+
+        if (r.status === "pending_first_access") {
+            alert("Cadastro localizado na REIN! Enviamos um link para você definir sua senha.");
+            window.location.href = "index.html";
+            return;
+        }
+
+        if (r.status === "success") {
+            alert("Cadastro criado com sucesso! Verifique seu e-mail.");
+            window.location.href = "index.html";
+        }
+
+    } catch (e) {
+        alert("Erro ao cadastrar: " + e.message);
     }
-
-    // LOGIN NORMAL
-    localStorage.setItem(
-      "painel_afiliado_session",
-      JSON.stringify({
-        id: data.user_id,
-        token: data.token,
-        email: email,
-        logged_at: new Date().toISOString(),
-      })
-    );
-
-    window.location.href = "painel.html";
-  } catch (err) {
-    console.error(err);
-    notify("Erro de conexão ao tentar login.");
-  }
-}
-
-// TELA DE TROCA DE SENHA — ★ CORRIGIDO ★
-async function trocarSenha() {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
-
-  if (!token) {
-    alert("Link inválido. Abra o link diretamente do seu e-mail.");
-    window.location.href = "index.html";
-    return;
-  }
-
-  const nova_senha = document.getElementById("senha_nova").value.trim();
-  const confirma = document.getElementById("senha_confirma").value.trim();
-
-  if (!nova_senha || !confirma) {
-    alert("Preencha os dois campos de senha.");
-    return;
-  }
-
-  if (nova_senha !== confirma) {
-    alert("As senhas digitadas não conferem.");
-    return;
-  }
-
-  try {
-    const resp = await fetch(`${API_BASE}/auth/change-password-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, nova_senha }),
-    });
-
-    const data = await resp.json();
-
-    if (!resp.ok || data.status !== "success") {
-      alert(data.detail || data.message || "Erro ao trocar senha.");
-      return;
-    }
-
-    alert("Senha alterada com sucesso! Agora você já pode fazer login.");
-    window.location.href = "index.html";
-  } catch (err) {
-    console.error(err);
-    alert("Erro de conexão ao tentar trocar a senha.");
-  }
 }
 
 
-// RECUPERAR CONTA
-async function recuperarConta() {
-  const email = prompt("Informe o email cadastrado:");
-  if (!email) return;
+// =====================
+// LOGIN
+// =====================
+async function realizarLogin() {
+    const data = {
+        email: document.getElementById("email_login").value,
+        senha: document.getElementById("senha_login").value
+    };
 
-  const nova_senha = prompt("Digite a nova senha:");
-  if (!nova_senha) return;
+    try {
+        const r = await api(
+            "https://painel-afiliados-production.up.railway.app/api/auth/login",
+            "POST",
+            data
+        );
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/recover`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, nova_senha }),
-    });
+        if (r.status === "change_password_required") {
+            alert("Primeiro acesso! Verifique seu e-mail para criar sua senha.");
+            return;
+        }
 
-    const data = await res.json().catch(() => null);
+        if (r.token) {
+            localStorage.setItem("token", r.token);
+            localStorage.setItem("user_id", r.user_id);
 
-    if (!res.ok) {
-      notify(data?.detail || "Erro ao recuperar conta.");
-      return;
+            window.location.href = "painel.html";
+        }
+
+    } catch (e) {
+        alert("Erro ao fazer login: " + e.message);
     }
+}
 
-    notify("Senha redefinida. Agora faça login.");
-  } catch (err) {
-    console.error(err);
-    notify("Erro de conexão ao recuperar conta.");
-  }
+
+// =====================
+// RECUPERAR SENHA
+// =====================
+async function recuperarSenha() {
+    const email = document.getElementById("rec_email").value;
+
+    try {
+        const r = await api(
+            "https://painel-afiliados-production.up.railway.app/api/auth/recover",
+            "POST",
+            { email }
+        );
+
+        alert("Nova senha enviada ao e-mail.");
+        window.location.href = "index.html";
+
+    } catch (e) {
+        alert("Erro: " + e.message);
+    }
 }
 
 function cadastrarPrompt() {
