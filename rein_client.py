@@ -301,42 +301,138 @@ def criar_pessoa_na_rein(payload: Dict[str, Any]) -> int:
     return int(pessoa_id)
 
 
-def get_or_create_pessoa_rein(usuario_data: Dict[str, Any]) -> int:
+def montar_payload_pessoa_para_cadastro(usuario_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Garante que exista uma Pessoa na REIN para este afiliado e retorna o ID.
-    - Se já existir (CPF/CNPJ+tipo), reaproveita.
-    - Se não existir, cria usando montar_payload_pessoa_para_cadastro.
+    Monta o JSON completo para cadastro de Pessoa na REIN a partir dos dados do afiliado.
+
+    Regra:
+    - 11 dígitos = pessoa física (TipoPessoa = 'F', campo Cpf com máscara)
+    - 14 dígitos = pessoa jurídica (TipoPessoa = 'J', campo Cnpj com máscara)
+    - Todos os campos do exemplo da REIN são enviados, mesmo que vazios.
     """
+
     cpf_cnpj_raw = usuario_data.get("cpf_cnpj") or ""
     d = somente_digitos(cpf_cnpj_raw)
 
+    nome = usuario_data.get("nome") or ""
+    email = usuario_data.get("email") or ""
+    telefone = usuario_data.get("telefone") or ""
+    cep = usuario_data.get("cep") or ""
+    endereco = usuario_data.get("endereco") or ""
+    numero = usuario_data.get("numero") or ""
+    bairro = usuario_data.get("bairro") or ""
+    cidade = usuario_data.get("cidade") or ""
+    estado = usuario_data.get("estado") or ""
+
     if len(d) == 11:
-        tipo_pessoa = "F"
+        tipo_pessoa_api = "F"
+        doc_formatado = formatar_documento(d)  # 000.000.000-00
+        cpf_field = doc_formatado
+        cnpj_field = ""
     elif len(d) == 14:
-        tipo_pessoa = "J"
+        tipo_pessoa_api = "J"
+        doc_formatado = formatar_documento(d)  # 00.000.000/0000-00
+        cpf_field = ""
+        cnpj_field = doc_formatado
     else:
-        raise ValueError("CPF/CNPJ inválido.")
+        raise ValueError("CPF/CNPJ inválido para cadastro da Pessoa na Rein.")
 
-    existente = buscar_pessoa_por_documento(
-        cpf_cnpj=d,
-        tipo_pessoa=tipo_pessoa,
-    )
-    if existente:
-        pessoa_id = (
-            existente.get("Id")
-            or existente.get("intId")
-            or existente.get("id")
+    # Bloco de e-mails (se tiver e-mail, cria um registro principal)
+    cadastro_emails: List[Dict[str, Any]] = []
+    if email:
+        cadastro_emails.append(
+            {
+                "Id": 0,
+                "TipoCadastroId": 0,
+                "Principal": True,
+                "Email": email,
+            }
         )
-        if not pessoa_id:
-            raise RuntimeError(
-                f"Pessoa encontrada na Rein sem ID válido: {existente}"
-            )
-        return int(pessoa_id)
 
-    payload = montar_payload_pessoa_para_cadastro(
-        {"cpf_cnpj": d, "nome": usuario_data.get("nome")}
-    )
-    return criar_pessoa_na_rein(payload)
+    # Bloco de endereços (se tiver CEP/logradouro, manda 1 principal)
+    cadastro_enderecos: List[Dict[str, Any]] = []
+    if any([cep, endereco, cidade, estado]):
+        cadastro_enderecos.append(
+            {
+                "Id": 0,
+                "Municipio": cidade or "",
+                "Estado": estado or "",
+                "PaisId": 0,  # pode ajustar depois se a REIN exigir o ID do Brasil
+                "Identificador": "Endereço principal",
+                "Logradouro": endereco or "",
+                "Numero": numero or "",
+                "Bairro": bairro or "",
+                "strComplemento": "",
+                "Cep": cep or "",
+                "Principal": True,
+                "Entrega": True,
+                "Retirada": True,
+                "Cobranca": True,
+                "strObservacao": "",
+            }
+        )
+
+    # Bloco de telefones (opcional)
+    cadastro_telefones: List[Dict[str, Any]] = []
+    if telefone:
+        cadastro_telefones.append(
+            {
+                "Id": 5,
+                "TipoCadastroId": 0,
+                "Nome": "Principal",
+                "Principal": True,
+                "Telefone": telefone,
+            }
+        )
+
+    payload: Dict[str, Any] = {
+        "CanalVendaId": 0,
+        "UsuarioTecnicoId": 0,
+        "UsuarioVendedorId": 0,
+        "EnviarEcf": True,
+        "CreditoDevolucao": 0,
+        "LimiteDeCredito": 0,
+        "Crt": 0,
+        "IndicadorInscricaoEstadual": 0,
+        "Cnae": "",
+        "Cnpj": cnpj_field,
+        "DataCadao": "",
+        "DataFundacao": "",
+        "DataUltimaModificacao": "",
+        "DocumentoEangeiro": "",
+        "InscricaoMunicipal": "",
+        "Suframa": "",
+        "InscricaoEstadual": "",
+        "Nome": nome,
+        "RazaoSocial": nome if tipo_pessoa_api == "J" else "",
+        "Observacao": "Cadastro criado automaticamente pelo painel de afiliados.",
+        "ObservacaoFiscal": "",
+        "PerfilFornecedor": "",
+        "PrazoLimiteCredito": "",
+        "TipoPessoa": tipo_pessoa_api,  # 'F' ou 'J' (padrão da REIN)
+        "Mei": False,
+        "Sexo": "",
+        "CadastroGeralEmail": cadastro_emails,
+        "CadastroGeralEndereco": cadastro_enderecos,
+        "CadastroGeralTelefone": cadastro_telefones,
+        "TabelaPrecoPermissaoVinculo": [],
+        "TabelaPrecoPrincipal": {
+            "Id": 0,
+            "Nome": "",
+            "Identificador": "",
+            "MostrarPrecoLojaVirtual": True,
+        },
+        "CondicaoPagamentoBloqueado": [],
+        "TipoCliente": [],  # se sua base exigir, depois dá para mandar o Id real aqui
+        "UsoMercadoriaConstanteFiscal": {
+            "Id": 0
+        },
+        # Campos equivalentes ao CPF (PF)
+        "Cpf": cpf_field,
+    }
+
+    return payload
+
 
 
 # ============================================================
@@ -356,3 +452,4 @@ def listar_pedidos_por_cliente(rein_pessoa_id: int) -> List[Dict[str, Any]]:
     resp.raise_for_status()
     data = resp.json() or {}
     return _extract_items(data)
+
