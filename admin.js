@@ -221,3 +221,33 @@ window.addEventListener("DOMContentLoaded", () => {
   carregarAfiliados();
   limparFormulario();
 });
+
+async function trocarSenha() {
+    const user_id = localStorage.getItem("pending_user_id");
+    const nova_senha = document.getElementById("senha_nova").value;
+
+    if (!nova_senha) {
+        alert("Digite uma senha");
+        return;
+    }
+
+    const resp = await fetch(API_BASE + "/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, nova_senha })
+    });
+
+    const data = await resp.json();
+
+    if (data.status !== "success") {
+        alert(data.message || "Erro ao trocar senha");
+        return;
+    }
+
+    // Limpa o ID pendente
+    localStorage.removeItem("pending_user_id");
+
+    alert("Senha alterada com sucesso!");
+    window.location.href = "index.html";
+}
+
