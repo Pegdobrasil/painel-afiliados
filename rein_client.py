@@ -1,75 +1,45 @@
-import re
 import requests
+import re
+from config import REIN_BASE, rein_headers
 
-from config import REIN_BASE, rein_headers  # usa o MESMO header dos outros scripts
 
-
-# ----------------------------------------------------------
-# GERA MÁSCARA PARA CPF OU CNPJ AUTOMATICAMENTE
-# ----------------------------------------------------------
 def aplicar_mascara_documento(doc: str) -> str:
     doc = re.sub(r"\D", "", doc or "")
-
     if len(doc) == 11:
-        return f"{doc[0:3]}.{doc[3:6]}.{doc[6:9]}-{doc[9:11]}"
-    elif len(doc) == 14:
-        return f"{doc[0:2]}.{doc[2:5]}.{doc[5:8]}/{doc[8:12]}-{doc[12:14]}"
+        return f"{doc[:3]}.{doc[3:6]}.{doc[6:9]}-{doc[9:]}"
+    if len(doc) == 14:
+        return f"{doc[:2]}.{doc[2:5]}.{doc[5:8]}/{doc[8:12]}-{doc[12:]}"
     return doc
 
 
-# ----------------------------------------------------------
-# BUSCA PESSOA POR CPF/CNPJ
-# ----------------------------------------------------------
 def buscar_pessoa_por_documento(documento: str):
-    """
-    Retorna o ID da pessoa na REIN, ou None se não encontrar.
-    Usa o mesmo esquema de token/headers do config.py.
-    """
-    endpoint_path = "/api/v1/pessoa"  # caminho completo para assinar e chamar
-    headers = rein_headers(endpoint_path)
+    endpoint = "/api/v1/pessoa"
+    headers = rein_headers(endpoint)
 
     termo = aplicar_mascara_documento(documento)
     params = {"page": 1, "termo": termo}
 
-    url = f"{REIN_BASE}{endpoint_path}"
-    resp = requests.get(url, headers=headers, params=params, timeout=20)
+    resp = requests.get(REIN_BASE + endpoint, headers=headers, params=params, timeout=20)
     resp.raise_for_status()
 
     data = resp.json()
-    itens = data.get("data", {}).get("items") or []
+    items = data.get("data", {}).get("items") or []
 
-    if not itens:
+    if not items:
         return None
 
-    pessoa = itens[0]
+    pessoa = items[0]
     return pessoa.get("Id") or pessoa.get("intId") or pessoa.get("id")
 
 
-# ----------------------------------------------------------
-# CRIA CLIENTE NA REIN
-# ----------------------------------------------------------
 def criar_cliente_rein(usuario_data: dict) -> int:
-    """
-    usuario_data deve conter:
-    - cpf_cnpj
-    - tipo_pessoa  ('PF' ou 'PJ')
-    - nome
-    - email
-    - telefone
-    - cep
-    - endereco
-    - numero
-    - bairro
-    - cidade
-    - estado
-    """
-    doc_mascarado = aplicar_mascara_documento(usuario_data.get("cpf_cnpj", ""))
-    doc_digits = re.sub(r"\D", "", doc_mascarado)
-    tipo_rein = "F" if len(doc_digits) == 11 else "J"
+    endpoint = "/api/v1/pessoa"
+    headers = rein_headers(endpoint)
+    url = REIN_BASE + endpoint
 
-    endpoint_path = "/api/v1/pessoa"
-    headers = rein_headers(endpoint_path)
-    url = f"{REIN_BASE}{endpoint_path}"
+    cpf = aplicar_mascara_documento(usuario_data["cpf_cnpj"])
+    digits = re.sub(r"\D", "", cpf)
+    tipo = "F" if len(digits) == 11 else "J"
 
     payload = {
         "intCanalVendaId": 4,
@@ -81,7 +51,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         "intCrt": 0,
         "intIndicadorInscricaoEstadual": 0,
         "strCnae": "",
-        "strCnpj": doc_mascarado if tipo_rein == "J" else "",
+        "strCnpj": cpf if tipo == "J" else "",
         "strDataCadastro": "",
         "strDataFundacao": "",
         "strDataUltimaModificacao": "",
@@ -89,13 +59,13 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         "strInscricaoMunicipal": "",
         "strSuframa": "",
         "strInscricaoEstadual": "",
-        "strNome": usuario_data.get("nome", ""),
-        "strRazaoSocial": usuario_data.get("nome", ""),
+        "strNome": usuario_data["nome"],
+        "strRazaoSocial": usuario_data["nome"],
         "strObservacao": "",
         "strObservacaoFiscal": "",
         "strPerfilFornecedor": "",
         "strPrazoLimiteCredito": "",
-        "strTipoPessoa": tipo_rein,
+        "strTipoPessoa": tipo,
         "boolMei": False,
         "strSexo": "",
         "CadastroGeralEmail": [
@@ -103,26 +73,26 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "intId": 0,
                 "intTipoCadastroId": 1,
                 "boolPrincipal": True,
-                "strEmail": usuario_data.get("email", ""),
+                "strEmail": usuario_data["email"]
             }
         ],
         "CadastroGeralEndereco": [
             {
                 "intId": 0,
-                "strMunicipio": usuario_data.get("cidade", ""),
-                "strEstado": usuario_data.get("estado", ""),
+                "strMunicipio": usuario_data["cidade"],
+                "strEstado": usuario_data["estado"],
                 "intPaisId": 0,
                 "strIdentificador": "",
-                "strLogradouro": usuario_data.get("endereco", ""),
-                "strNumero": usuario_data.get("numero", ""),
-                "strBairro": usuario_data.get("bairro", ""),
+                "strLogradouro": usuario_data["endereco"],
+                "strNumero": usuario_data["numero"],
+                "strBairro": usuario_data["bairro"],
                 "strComplemento": "",
-                "intCep": usuario_data.get("cep", ""),
+                "intCep": usuario_data["cep"],
                 "boolPrincipal": True,
                 "boolEntrega": True,
                 "boolRetirada": True,
                 "boolCobranca": True,
-                "strObservacao": "Endereço cadastrado automaticamente",
+                "strObservacao": "Cadastro automático"
             }
         ],
         "CadastroGeralTelefone": [
@@ -131,7 +101,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "intTipoCadastroId": 1,
                 "strNome": "",
                 "boolPrincipal": True,
-                "strTelefone": usuario_data.get("telefone", "") or "",
+                "strTelefone": usuario_data["telefone"] or "",
             }
         ],
         "TabelaPrecoPermissaoVinculo": [
@@ -140,23 +110,18 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "strNome": "",
                 "strIdentificador": "",
                 "boolMostrarPrecoLojaVirtual": True,
-                "boolPadrao": True,
+                "boolPadrao": True
             }
         ],
         "TabelaPrecoPrincipal": {},
         "CondicaoPagamentoBloqueado": [],
         "TipoCliente": [
-            {
-                "intId": 1,
-                "strNome": "",
-            }
+            {"intId": 1, "strNome": ""}
         ],
-        "UsoMercadoriaConstanteFiscal": {
-            "intId": 0,
-        },
+        "UsoMercadoriaConstanteFiscal": {"intId": 0},
     }
 
-    resp = requests.put(url, json=payload, headers=headers, timeout=20)
+    resp = requests.put(url, headers=headers, json=payload, timeout=20)
     resp.raise_for_status()
 
     data = resp.json()
@@ -164,17 +129,10 @@ def criar_cliente_rein(usuario_data: dict) -> int:
     pessoa_id = inner.get("Id") or inner.get("intId") or inner.get("id")
 
     if not pessoa_id:
-        raise RuntimeError(f"Não foi possível obter o ID da pessoa criada na Rein: {data}")
+        raise RuntimeError(f"Falha ao obter ID: {data}")
 
     return int(pessoa_id)
 
 
-# ----------------------------------------------------------
-# LISTAR PEDIDOS POR CLIENTE (stub simples, pra não quebrar)
-# ----------------------------------------------------------
 def listar_pedidos_por_cliente(pessoa_id: int):
-    """
-    Por enquanto retorna lista vazia para não quebrar /saldo e /pedidos.
-    Depois a gente liga no endpoint correto de pedidos da REIN.
-    """
     return []
