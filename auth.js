@@ -114,11 +114,11 @@ async function login() {
     }
 
     // Primeiro acesso — força troca de senha
-    if (data.status === "change_password_required") {
-      localStorage.setItem("pending_user_id", data.user_id);
-      window.location.href = "trocar_senha.html";
-      return;
-    }
+   if (data.status === "change_password_required") {
+  alert("Primeiro acesso: verifique seu e-mail. Enviamos um link para você criar uma nova senha.");
+  return;
+}
+
 
     if (data.status !== "success") {
       notify(data.message || "Erro ao fazer login.");
