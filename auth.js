@@ -145,33 +145,50 @@ async function login() {
 
 // TELA DE TROCA DE SENHA — ★ CORRIGIDO ★
 async function trocarSenha() {
-  const user_id = localStorage.getItem("pending_user_id");
-  const nova_senha = document.getElementById("senha_nova").value;
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
 
-  if (!nova_senha) {
-    alert("Digite uma nova senha");
+  if (!token) {
+    alert("Link inválido. Abra o link diretamente do seu e-mail.");
+    window.location.href = "index.html";
     return;
   }
 
-  const resp = await fetch(`${API_BASE}/auth/change-password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id, nova_senha })
-  });
+  const nova_senha = document.getElementById("senha_nova").value.trim();
+  const confirma = document.getElementById("senha_confirma").value.trim();
 
-  const data = await resp.json();
-
-  if (data.status !== "success") {
-    alert(data.message || "Erro ao trocar senha");
+  if (!nova_senha || !confirma) {
+    alert("Preencha os dois campos de senha.");
     return;
   }
 
-  // Limpa o ID pendente
-  localStorage.removeItem("pending_user_id");
+  if (nova_senha !== confirma) {
+    alert("As senhas digitadas não conferem.");
+    return;
+  }
 
-  alert("Senha alterada com sucesso!");
-  window.location.href = "index.html";
+  try {
+    const resp = await fetch(`${API_BASE}/auth/change-password-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, nova_senha }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || data.status !== "success") {
+      alert(data.detail || data.message || "Erro ao trocar senha.");
+      return;
+    }
+
+    alert("Senha alterada com sucesso! Agora você já pode fazer login.");
+    window.location.href = "index.html";
+  } catch (err) {
+    console.error(err);
+    alert("Erro de conexão ao tentar trocar a senha.");
+  }
 }
+
 
 // RECUPERAR CONTA
 async function recuperarConta() {
