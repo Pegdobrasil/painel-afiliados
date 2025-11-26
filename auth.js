@@ -74,9 +74,10 @@ async function registrar() {
       body: JSON.stringify(payload),
     });
 
+    const data = await res.json().catch(() => null);
+
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      notify(err?.detail || "Erro ao cadastrar.");
+      notify(data?.detail || "Erro ao cadastrar.");
       return;
     }
 
@@ -88,7 +89,7 @@ async function registrar() {
   }
 }
 
-// LOGIN
+// LOGIN — ★ CORRIGIDO ★
 async function login() {
   const email = v("email");
   const senha = v("senha");
@@ -105,20 +106,32 @@ async function login() {
       body: JSON.stringify({ email, senha }),
     });
 
+    const data = await res.json().catch(() => null);
+
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      notify(err?.detail || "Não foi possível fazer login.");
+      notify(data?.detail || "Não foi possível fazer login.");
       return;
     }
 
-    const data = await res.json();
-    // agora salvando id, nome e email
+    // Primeiro acesso — força troca de senha
+    if (data.status === "change_password_required") {
+      localStorage.setItem("pending_user_id", data.user_id);
+      window.location.href = "trocar_senha.html";
+      return;
+    }
+
+    if (data.status !== "success") {
+      notify(data.message || "Erro ao fazer login.");
+      return;
+    }
+
+    // LOGIN NORMAL
     localStorage.setItem(
       "painel_afiliado_session",
       JSON.stringify({
-        id: data.id,
-        nome: data.nome,
-        email: data.email,
+        id: data.user_id,
+        token: data.token,
+        email: email,
         logged_at: new Date().toISOString(),
       })
     );
@@ -130,12 +143,42 @@ async function login() {
   }
 }
 
-// RECUPERAR CONTA (tela de login)
+// TELA DE TROCA DE SENHA — ★ CORRIGIDO ★
+async function trocarSenha() {
+  const user_id = localStorage.getItem("pending_user_id");
+  const nova_senha = document.getElementById("senha_nova").value;
+
+  if (!nova_senha) {
+    alert("Digite uma nova senha");
+    return;
+  }
+
+  const resp = await fetch(`${API_BASE}/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id, nova_senha })
+  });
+
+  const data = await resp.json();
+
+  if (data.status !== "success") {
+    alert(data.message || "Erro ao trocar senha");
+    return;
+  }
+
+  // Limpa o ID pendente
+  localStorage.removeItem("pending_user_id");
+
+  alert("Senha alterada com sucesso!");
+  window.location.href = "index.html";
+}
+
+// RECUPERAR CONTA
 async function recuperarConta() {
   const email = prompt("Informe o email cadastrado:");
   if (!email) return;
 
-  const nova_senha = prompt("Digite a nova senha que deseja usar:");
+  const nova_senha = prompt("Digite a nova senha:");
   if (!nova_senha) return;
 
   try {
@@ -145,13 +188,14 @@ async function recuperarConta() {
       body: JSON.stringify({ email, nova_senha }),
     });
 
+    const data = await res.json().catch(() => null);
+
     if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      notify(err?.detail || "Erro ao recuperar conta.");
+      notify(data?.detail || "Erro ao recuperar conta.");
       return;
     }
 
-    notify("Senha redefinida. Agora faça login com a nova senha.");
+    notify("Senha redefinida. Agora faça login.");
   } catch (err) {
     console.error(err);
     notify("Erro de conexão ao recuperar conta.");
@@ -160,32 +204,4 @@ async function recuperarConta() {
 
 function cadastrarPrompt() {
   window.location.href = "cadastro.html";
-}
-async function trocarSenha() {
-    const user_id = localStorage.getItem("pending_user_id");
-    const nova_senha = document.getElementById("senha_nova").value;
-
-    if (!nova_senha) {
-        alert("Digite uma senha");
-        return;
-    }
-
-    const resp = await fetch(API_BASE + "/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, nova_senha })
-    });
-
-    const data = await resp.json();
-
-    if (data.status !== "success") {
-        alert(data.message || "Erro ao trocar senha");
-        return;
-    }
-
-    // Limpa o ID pendente
-    localStorage.removeItem("pending_user_id");
-
-    alert("Senha alterada com sucesso!");
-    window.location.href = "index.html";
 }
