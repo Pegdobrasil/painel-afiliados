@@ -1,7 +1,9 @@
-from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
+# ===========================
+#  MODELOS DE USUÁRIO
+# ===========================
 class UsuarioCreate(BaseModel):
     tipo_pessoa: str
     cpf_cnpj: str
@@ -17,11 +19,6 @@ class UsuarioCreate(BaseModel):
     senha: str
 
 
-class LoginRequest(BaseModel):
-    email: str
-    senha: str
-
-
 class UsuarioOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,44 +27,48 @@ class UsuarioOut(BaseModel):
     cpf_cnpj: str
     nome: str
     email: str
-    telefone: Optional[str] = None
-    cep: Optional[str] = None
-    endereco: Optional[str] = None
-    numero: Optional[str] = None
-    bairro: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
-    rein_pessoa_id: Optional[int] = None
-    first_login_must_change: bool = False
+    telefone: str | None = None
+    cep: str | None = None
+    endereco: str | None = None
+    numero: str | None = None
+    bairro: str | None = None
+    cidade: str | None = None
+    estado: str | None = None
 
 
 class UsuarioUpdate(BaseModel):
-    tipo_pessoa: Optional[str] = None
-    cpf_cnpj: Optional[str] = None
-    nome: Optional[str] = None
-    email: Optional[str] = None
-    telefone: Optional[str] = None
-    cep: Optional[str] = None
-    endereco: Optional[str] = None
-    numero: Optional[str] = None
-    bairro: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
+    tipo_pessoa: str | None = None
+    cpf_cnpj: str | None = None
+    nome: str | None = None
+    email: str | None = None
+    telefone: str | None = None
+    cep: str | None = None
+    endereco: str | None = None
+    numero: str | None = None
+    bairro: str | None = None
+    cidade: str | None = None
+    estado: str | None = None
 
 
-class PasswordChange(BaseModel):
-    senha_atual: str
-    senha_nova: str
-
-
-class PasswordReset(BaseModel):
-    email: str
-    nova_senha: str
-    class ChangePassword(BaseModel):
-    user_id: int
-    nova_senha: str
-
+# ===========================
+# LOGIN
+# ===========================
 class Login(BaseModel):
     email: str
     senha: str
 
+
+# ===========================
+# PRIMEIRO ACESSO (TROCA DE SENHA)
+# ===========================
+class ChangePassword(BaseModel):
+    user_id: int
+    nova_senha: str
+
+
+# ===========================
+# RESET DE SENHA (OPCIONAL)
+# ===========================
+class PasswordReset(BaseModel):
+    email: str
+    nova_senha: str
