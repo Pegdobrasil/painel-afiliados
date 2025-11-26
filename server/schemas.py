@@ -63,3 +63,11 @@ class PasswordChange(BaseModel):
 class PasswordReset(BaseModel):
     email: str
     nova_senha: str
+    class ChangePassword(BaseModel):
+    user_id: int
+    nova_senha: str
+
+class Login(BaseModel):
+    email: str
+    senha: str
+
