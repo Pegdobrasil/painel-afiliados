@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -12,43 +12,51 @@ from . import schemas
 from .email_config import send_email
 import rein_client
 
-
-# Garante tabelas
+# Garante que a tabela exista
 Base.metadata.create_all(bind=engine)
 
 router = APIRouter()
+
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
-# ======================================
-# Helpers de Senha
-# ======================================
+# =====================================================
+# Helpers de senha
+# =====================================================
 
 def hash_senha(senha: str) -> str:
     return pwd_context.hash(senha)
 
+
 def verificar_senha(senha: str, senha_hash: str) -> bool:
     return pwd_context.verify(senha, senha_hash)
+
 
 def gerar_senha_aleatoria(tamanho: int = 10) -> str:
     chars = string.ascii_letters + string.digits
     return "".join(secrets.choice(chars) for _ in range(tamanho))
 
-def gerar_reset_token():
+
+def gerar_reset_token() -> str:
     return secrets.token_urlsafe(32)
 
-def criar_reset_para_usuario(usuario: Usuario, minutos: int = 60):
+
+def criar_reset_para_usuario(usuario: Usuario, minutos: int = 60) -> None:
     usuario.reset_token = gerar_reset_token()
     usuario.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=minutos)
 
 
-# ======================================
-# Helpers de E-mail
-# ======================================
+# =====================================================
+# Helpers de e-mail
+# =====================================================
 
 FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/trocar_senha.html"
 
-def enviar_email_link_reset(usuario: Usuario):
+
+def enviar_email_link_reset(usuario: Usuario) -> None:
+    if not getattr(usuario, "reset_token", None):
+        criar_reset_para_usuario(usuario)
+
     link = f"{FRONT_RESET_URL}?token={usuario.reset_token}"
 
     html = f"""
@@ -62,124 +70,107 @@ def enviar_email_link_reset(usuario: Usuario):
     <p>Se você não pediu isto, ignore este e-mail.</p>
     """
 
-    send_email(
-        to_email=usuario.email,
-        subject="Definir senha - Painel de Afiliados PEG do Brasil",
-        html_body=html
-    )
+    # Nunca deixar o erro de SMTP derrubar a API
+    try:
+        send_email(
+            to_email=usuario.email,
+            subject="Definir senha - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao enviar e-mail de link de senha: {e}")
 
 
-def enviar_email_boas_vindas(usuario: Usuario):
+def enviar_email_boas_vindas(usuario: Usuario) -> None:
     html = f"""
     <p>Olá, {usuario.nome}!</p>
-    <p>Seu cadastro foi realizado com sucesso.</p>
-    <p>Seus dados já foram vinculados ao nosso ERP.</p>
+    <p>Seu cadastro foi realizado com sucesso no
+    <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
+    <p>Agora você já pode acessar o painel utilizando o e-mail e senha cadastrados.</p>
     """
 
-    send_email(
-        to_email=usuario.email,
-        subject="Cadastro realizado - Painel de Afiliados PEG do Brasil",
-        html_body=html
-    )
+    try:
+        send_email(
+            to_email=usuario.email,
+            subject="Cadastro realizado - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao enviar e-mail de boas-vindas: {e}")
 
 
-def enviar_email_nova_senha(usuario: Usuario, senha: str):
+def enviar_email_senha_alterada(usuario: Usuario) -> None:
     html = f"""
     <p>Olá, {usuario.nome}!</p>
-    <p>Sua nova senha é: <strong>{senha}</strong></p>
-    <p>Você pode alterá-la a qualquer momento no painel.</p>
+    <p>A senha de acesso ao seu Painel de Afiliados foi alterada.</p>
+    <p>Se você não reconhece esta alteração, entre em contato com o suporte.</p>
     """
+    try:
+        send_email(
+            to_email=usuario.email,
+            subject="Senha alterada - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao enviar e-mail de confirmação de senha: {e}")
 
-    send_email(
-        to_email=usuario.email,
-        subject="Nova senha - Painel de Afiliados",
-        html_body=html
-    )
 
-
-# ======================================
-# ROTA: CADASTRO DE USUÁRIO
-# ======================================
+# =====================================================
+# ROTA: CADASTRO
+# =====================================================
 
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-
     documento = re.sub(r"\D", "", data.cpf_cnpj)
 
-    # Verifica duplicidade no PAINEL
+    # Verifica duplicidade no painel
     if db.query(Usuario).filter(Usuario.email == data.email).first():
         raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
 
     if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
         raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado.")
 
-
-    # 1) VERIFICA SE CLIENTE EXISTE NA REIN
-    pessoa_existente_id = rein_client.buscar_pessoa_por_documento(documento)
-
-
-    # ======================================
-    # A) CLIENTE JÁ EXISTE NA REIN
-    # ======================================
-    if pessoa_existente_id:
-
-        senha_inicial = gerar_senha_aleatoria()
-        senha_hash = hash_senha(senha_inicial)
-
-        usuario = Usuario(
-            tipo_pessoa=data.tipo_pessoa,
-            cpf_cnpj=documento,
-            nome=data.nome,
-            email=data.email,
-            telefone=data.telefone,
-            cep=data.cep,
-            endereco=data.endereco,
-            numero=data.numero,
-            bairro=data.bairro,
-            cidade=data.cidade,
-            estado=data.estado,
-            senha_hash=senha_hash,
-            rein_pessoa_id=pessoa_existente_id,
-            first_login_must_change=True
+    # 1) Verifica se já existe pessoa na Rein
+    try:
+        pessoa_existente_id = rein_client.buscar_pessoa_por_documento(documento)
+    except Exception as e:
+        # Erro de integração → devolve 500 amigável
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao consultar cliente na Rein: {e}",
         )
 
-        # Gera token de primeiro acesso
-        criar_reset_para_usuario(usuario)
+    rein_pessoa_id: int
+    if pessoa_existente_id:
+        # Cliente já existe na Rein → só vincula
+        rein_pessoa_id = int(pessoa_existente_id)
+    else:
+        # Não existe → cria na Rein
+        try:
+            rein_pessoa_id = int(
+                rein_client.criar_cliente_rein(
+                    {
+                        "cpf_cnpj": documento,
+                        "tipo_pessoa": data.tipo_pessoa,
+                        "nome": data.nome,
+                        "email": data.email,
+                        "telefone": data.telefone,
+                        "cep": data.cep,
+                        "endereco": data.endereco,
+                        "numero": data.numero,
+                        "bairro": data.bairro,
+                        "cidade": data.cidade,
+                        "estado": data.estado,
+                    }
+                )
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erro ao criar cliente na Rein: {e}",
+            )
 
-        db.add(usuario)
-        db.commit()
-        db.refresh(usuario)
-
-        # Envia link por e-mail
-        enviar_email_link_reset(usuario)
-
-        return {
-            "status": "pending_first_access",
-            "message": "Cliente já existe no ERP. Enviamos um link para definir sua senha."
-        }
-
-
-    # ======================================
-    # B) CLIENTE NÃO EXISTE → CRIA NA REIN
-    # ======================================
-    try:
-        rein_id = rein_client.criar_cliente_rein({
-            "cpf_cnpj": documento,
-            "tipo_pessoa": data.tipo_pessoa,
-            "nome": data.nome,
-            "email": data.email,
-            "telefone": data.telefone,
-            "cep": data.cep,
-            "endereco": data.endereco,
-            "numero": data.numero,
-            "bairro": data.bairro,
-            "cidade": data.cidade,
-            "estado": data.estado
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na Rein: {e}")
-
-
+    # Cria usuário local usando a senha informada
     usuario = Usuario(
         tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=documento,
@@ -193,25 +184,33 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
         cidade=data.cidade,
         estado=data.estado,
         senha_hash=hash_senha(data.senha),
-        rein_pessoa_id=rein_id,
-        first_login_must_change=False
+        rein_pessoa_id=rein_pessoa_id,
+        first_login_must_change=False,
     )
+
+    # Campos opcionais (se existirem no modelo)
+    if hasattr(usuario, "ativo"):
+        usuario.ativo = True
 
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
 
+    # Tenta enviar e-mail de boas-vindas, sem derrubar a rota
     enviar_email_boas_vindas(usuario)
 
     return {
         "status": "success",
-        "message": "Cadastro criado na REIN e vinculado com sucesso!"
+        "message": "Cadastro realizado com sucesso!",
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
     }
 
 
-# ======================================
+# =====================================================
 # ROTA: LOGIN
-# ======================================
+# =====================================================
 
 @router.post("/login")
 def login(data: schemas.Login, db: Session = Depends(get_db)):
@@ -220,38 +219,46 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
 
+    # Se tiver campo 'ativo' e estiver falso, bloqueia
+    if getattr(usuario, "ativo", True) is False:
+        raise HTTPException(status_code=403, detail="Usuário inativo.")
+
     if not verificar_senha(data.senha, usuario.senha_hash):
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
 
-    # Primeiro acesso → precisa usar token enviado por e-mail
-    if usuario.first_login_must_change:
-        return {
-            "status": "change_password_required",
-            "message": "Primeiro acesso: verifique seu e-mail para criar sua senha."
-        }
-
+    # Por enquanto ignoramos first_login_must_change para não travar
     token = secrets.token_hex(32)
+
     return {
         "status": "success",
         "token": token,
-        "user_id": usuario.id
+        "id": usuario.id,
+        "nome": usuario.nome,
+        "email": usuario.email,
     }
 
 
-# ======================================
-# ROTA: REDEFINIR SENHA (TOKEN VIA E-MAIL)
-# ======================================
+# =====================================================
+# ROTA: TROCAR SENHA VIA TOKEN (tela trocar_senha.html)
+# =====================================================
 
 @router.post("/change-password-token")
-def change_password_token(data: schemas.ChangePasswordToken, db: Session = Depends(get_db)):
-    usuario = db.query(Usuario).filter(
-        Usuario.reset_token == data.token
-    ).first()
+def change_password_token(
+    data: schemas.ChangePasswordToken, db: Session = Depends(get_db)
+):
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.reset_token == data.token)
+        .first()
+    )
 
     if not usuario:
         raise HTTPException(status_code=400, detail="Token inválido.")
 
-    if not usuario.reset_token_expires_at or usuario.reset_token_expires_at < datetime.utcnow():
+    if (
+        not getattr(usuario, "reset_token_expires_at", None)
+        or usuario.reset_token_expires_at < datetime.utcnow()
+    ):
         raise HTTPException(status_code=400, detail="Token expirado.")
 
     usuario.senha_hash = hash_senha(data.nova_senha)
@@ -262,12 +269,14 @@ def change_password_token(data: schemas.ChangePasswordToken, db: Session = Depen
     db.commit()
     db.refresh(usuario)
 
+    enviar_email_senha_alterada(usuario)
+
     return {"status": "success", "message": "Senha atualizada com sucesso!"}
 
 
-# ======================================
-# ROTA: RECUPERAR SENHA (SEM TOKEN)
-# ======================================
+# =====================================================
+# ROTA: RECUPERAR CONTA (fluxo do botão na tela de login)
+# =====================================================
 
 @router.post("/recover")
 def recover(data: schemas.PasswordReset, db: Session = Depends(get_db)):
@@ -276,12 +285,18 @@ def recover(data: schemas.PasswordReset, db: Session = Depends(get_db)):
     if not usuario:
         raise HTTPException(status_code=400, detail="E-mail não encontrado.")
 
-    nova = gerar_senha_aleatoria()
-    usuario.senha_hash = hash_senha(nova)
+    usuario.senha_hash = hash_senha(data.nova_senha)
+    usuario.first_login_must_change = False
+    usuario.reset_token = None
+    if hasattr(usuario, "reset_token_expires_at"):
+        usuario.reset_token_expires_at = None
 
     db.commit()
     db.refresh(usuario)
 
-    enviar_email_nova_senha(usuario, nova)
+    enviar_email_senha_alterada(usuario)
 
-    return {"status": "ok", "message": "Uma nova senha foi enviada ao seu e-mail."}
+    return {
+        "status": "ok",
+        "message": "Senha redefinida. Agora faça login com a nova senha.",
+    }
