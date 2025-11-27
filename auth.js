@@ -1,211 +1,304 @@
-// CONFIG API
-const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+import secrets
+import string
+import re
 
-// helpers
-function v(id) {
-  const el = document.getElementById(id);
-  return el ? el.value.trim() : "";
-}
-function notify(msg) {
-  alert(msg);
-}
-function onlyDigits(str) {
-  return (str || "").replace(/\D/g, "");
-}
+from .database import get_db, Base, engine
+from .models import Usuario
+from . import schemas
+from .email_config import send_email
+import rein_client
 
-// CEP
-async function buscarCep() {
-  const cep = onlyDigits(v("cep"));
-  if (cep.length !== 8) return;
+# Garante tabelas
+Base.metadata.create_all(bind=engine)
 
-  try {
-    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const data = await res.json();
-    if (data.erro) {
-      notify("CEP não encontrado.");
-      return;
-    }
-    if (document.getElementById("logradouro"))
-      document.getElementById("logradouro").value = data.logradouro || "";
-    if (document.getElementById("bairro"))
-      document.getElementById("bairro").value = data.bairro || "";
-    if (document.getElementById("cidade"))
-      document.getElementById("cidade").value = data.localidade || "";
-    if (document.getElementById("uf"))
-      document.getElementById("uf").value = (data.uf || "").toUpperCase();
-  } catch (err) {
-    console.error(err);
-    notify("Não foi possível consultar o CEP.");
-  }
-}
-
-// CADASTRO
-async function registrar() {
-  const payload = {
-    tipo_pessoa: v("tipo_pessoa"),
-    cpf_cnpj: onlyDigits(v("cpf_cnpj")),
-    nome: v("nome"),
-    email: v("email"),
-    telefone: v("telefone"),
-    cep: onlyDigits(v("cep")),
-    endereco: (() => {
-      const lg = v("logradouro");
-      const cp = v("complemento");
-      return cp ? `${lg} - ${cp}` : lg;
-    })(),
-    numero: v("numero"),
-    bairro: v("bairro"),
-    cidade: v("cidade"),
-    estado: v("uf"),
-    senha: v("senha"),
-  };
-
-  for (const k in payload) {
-    if (!payload[k]) {
-      notify("Preencha todos os campos obrigatórios.");
-      return;
-    }
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      notify(data?.detail || "Erro ao cadastrar.");
-      return;
-    }
-
-    notify("Cadastro realizado com sucesso!");
-    window.location.href = "index.html";
-  } catch (err) {
-    console.error(err);
-    notify("Erro ao enviar o cadastro.");
-  }
-}
-
-// LOGIN — ★ CORRIGIDO ★
-async function api(url, method = "GET", body = null) {
-    const opts = {
-        method,
-        headers: { "Content-Type": "application/json" }
-    };
-    if (body) opts.body = JSON.stringify(body);
-
-    const resp = await fetch(url, opts);
-
-    if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text || resp.statusText);
-    }
-
-    return resp.json();
-}
+router = APIRouter()
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
-// =====================
-// CADASTRO
-// =====================
-async function salvarCadastro() {
-    const data = {
-        tipo_pessoa: document.getElementById("tipo_pessoa").value,
-        cpf_cnpj: document.getElementById("cpf_cnpj").value,
-        nome: document.getElementById("nome").value,
-        email: document.getElementById("email").value,
-        telefone: document.getElementById("telefone").value,
-        cep: document.getElementById("cep").value,
-        endereco: document.getElementById("endereco").value,
-        numero: document.getElementById("numero").value,
-        bairro: document.getElementById("bairro").value,
-        cidade: document.getElementById("cidade").value,
-        estado: document.getElementById("estado").value,
-        senha: document.getElementById("senha").value
-    };
+# ======================================
+# Helpers de Senha
+# ======================================
 
-    try {
-        const r = await api(
-            "https://painel-afiliados-production.up.railway.app/api/auth/register",
-            "POST",
-            data
-        );
+def hash_senha(senha: str) -> str:
+    return pwd_context.hash(senha)
 
-        if (r.status === "pending_first_access") {
-            alert("Cadastro localizado na REIN! Enviamos um link para você definir sua senha.");
-            window.location.href = "index.html";
-            return;
+
+def verificar_senha(senha: str, senha_hash: str) -> bool:
+    return pwd_context.verify(senha, senha_hash)
+
+
+def gerar_senha_aleatoria(tamanho: int = 10) -> str:
+    chars = string.ascii_letters + string.digits
+    return "".join(secrets.choice(chars) for _ in range(tamanho))
+
+
+def gerar_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def criar_reset_para_usuario(usuario: Usuario, minutos: int = 60) -> None:
+    usuario.reset_token = gerar_reset_token()
+    usuario.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=minutos)
+
+
+# ======================================
+# Helpers de E-mail
+# ======================================
+
+FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/trocar_senha.html"
+
+
+def enviar_email_link_reset(usuario: Usuario) -> None:
+    link = f"{FRONT_RESET_URL}?token={usuario.reset_token}"
+
+    html = f"""
+    <p>Olá, {usuario.nome}!</p>
+    <p>Para definir sua senha de acesso ao <strong>Painel de Afiliados PEG do Brasil</strong>,
+    clique no link abaixo:</p>
+
+    <p><a href="{link}">{link}</a></p>
+
+    <p>Este link expira em 1 hora.</p>
+    <p>Se você não pediu isto, ignore este e-mail.</p>
+    """
+
+    send_email(
+        to_email=usuario.email,
+        subject="Definir senha - Painel de Afiliados PEG do Brasil",
+        html_body=html
+    )
+
+
+def enviar_email_boas_vindas(usuario: Usuario) -> None:
+    html = f"""
+    <p>Olá, {usuario.nome}!</p>
+    <p>Seu cadastro foi realizado com sucesso.</p>
+    <p>Seus dados já foram vinculados ao nosso ERP.</p>
+    """
+
+    send_email(
+        to_email=usuario.email,
+        subject="Cadastro realizado - Painel de Afiliados PEG do Brasil",
+        html_body=html
+    )
+
+
+def enviar_email_nova_senha(usuario: Usuario, senha: str) -> None:
+    html = f"""
+    <p>Olá, {usuario.nome}!</p>
+    <p>Sua nova senha é: <strong>{senha}</strong></p>
+    <p>Você pode alterá-la a qualquer momento no painel.</p>
+    """
+
+    send_email(
+        to_email=usuario.email,
+        subject="Nova senha - Painel de Afiliados",
+        html_body=html
+    )
+
+
+# ======================================
+# ROTA: CADASTRO DE USUÁRIO
+# ======================================
+
+@router.post("/register")
+def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+
+    documento = re.sub(r"\D", "", data.cpf_cnpj)
+
+    # Verifica duplicidade no PAINEL
+    if db.query(Usuario).filter(Usuario.email == data.email).first():
+        raise HTTPException(status_code=400, detail="E-mail já cadastrado.")
+
+    if db.query(Usuario).filter(Usuario.cpf_cnpj == documento).first():
+        raise HTTPException(status_code=400, detail="CPF/CNPJ já cadastrado.")
+
+    # 1) VERIFICA SE CLIENTE EXISTE NA REIN
+    pessoa_existente_id = rein_client.buscar_pessoa_por_documento(documento)
+
+    # ======================================
+    # A) CLIENTE JÁ EXISTE NA REIN → SÓ VINCULA
+    # ======================================
+    if pessoa_existente_id:
+
+        # Usa a senha informada no cadastro normalmente
+        senha_hash = hash_senha(data.senha)
+
+        usuario = Usuario(
+            tipo_pessoa=data.tipo_pessoa,
+            cpf_cnpj=documento,
+            nome=data.nome,
+            email=data.email,
+            telefone=data.telefone,
+            cep=data.cep,
+            endereco=data.endereco,
+            numero=data.numero,
+            bairro=data.bairro,
+            cidade=data.cidade,
+            estado=data.estado,
+            senha_hash=senha_hash,
+            rein_pessoa_id=pessoa_existente_id,
+            first_login_must_change=False
+        )
+
+        db.add(usuario)
+        db.commit()
+        db.refresh(usuario)
+
+        # Tentativa de enviar e-mail sem derrubar a API se falhar
+        try:
+            enviar_email_boas_vindas(usuario)
+        except Exception as e:
+            print(f"Falha ao enviar e-mail de boas-vindas (cliente já existia na Rein): {e}")
+
+        return {
+            "status": "success",
+            "message": "Cliente já existia na REIN e foi vinculado ao seu painel."
         }
 
-        if (r.status === "success") {
-            alert("Cadastro criado com sucesso! Verifique seu e-mail.");
-            window.location.href = "index.html";
+    # ======================================
+    # B) CLIENTE NÃO EXISTE → CRIA NA REIN
+    # ======================================
+    try:
+        rein_id = rein_client.criar_cliente_rein({
+            "cpf_cnpj": documento,
+            "tipo_pessoa": data.tipo_pessoa,
+            "nome": data.nome,
+            "email": data.email,
+            "telefone": data.telefone,
+            "cep": data.cep,
+            "endereco": data.endereco,
+            "numero": data.numero,
+            "bairro": data.bairro,
+            "cidade": data.cidade,
+            "estado": data.estado
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar cliente na Rein: {e}")
+
+    usuario = Usuario(
+        tipo_pessoa=data.tipo_pessoa,
+        cpf_cnpj=documento,
+        nome=data.nome,
+        email=data.email,
+        telefone=data.telefone,
+        cep=data.cep,
+        endereco=data.endereco,
+        numero=data.numero,
+        bairro=data.bairro,
+        cidade=data.cidade,
+        estado=data.estado,
+        senha_hash=hash_senha(data.senha),
+        rein_pessoa_id=rein_id,
+        first_login_must_change=False
+    )
+
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+
+    # Tenta enviar e-mail de boas-vindas, mas não interrompe o fluxo em caso de erro
+    try:
+        enviar_email_boas_vindas(usuario)
+    except Exception as e:
+        print(f"Falha ao enviar e-mail de boas-vindas (cliente criado na Rein): {e}")
+
+    return {
+        "status": "success",
+        "message": "Cadastro criado na REIN e vinculado com sucesso!"
+    }
+
+
+# ======================================
+# ROTA: LOGIN
+# ======================================
+
+@router.post("/login")
+def login(data: schemas.Login, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
+
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
+
+    if not verificar_senha(data.senha, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
+
+    # Primeiro acesso → só bloqueia se existir token de reset válido.
+    # Isso evita travar cadastros antigos que ficaram com a flag marcada,
+    # mas sem token gerado ou já expirado.
+    if (
+        usuario.first_login_must_change
+        and usuario.reset_token
+        and usuario.reset_token_expires_at
+        and usuario.reset_token_expires_at > datetime.utcnow()
+    ):
+        return {
+            "status": "change_password_required",
+            "message": "Primeiro acesso: verifique seu e-mail para criar sua senha."
         }
 
-    } catch (e) {
-        alert("Erro ao cadastrar: " + e.message);
+    token = secrets.token_hex(32)
+    return {
+        "status": "success",
+        "token": token,
+        "user_id": usuario.id
     }
-}
 
 
-// =====================
-// LOGIN
-// =====================
-async function realizarLogin() {
-    const data = {
-        email: document.getElementById("email_login").value,
-        senha: document.getElementById("senha_login").value
-    };
+# ======================================
+# ROTA: REDEFINIR SENHA (TOKEN VIA E-MAIL)
+# ======================================
 
-    try {
-        const r = await api(
-            "https://painel-afiliados-production.up.railway.app/api/auth/login",
-            "POST",
-            data
-        );
+@router.post("/change-password-token")
+def change_password_token(data: schemas.ChangePasswordToken, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(
+        Usuario.reset_token == data.token
+    ).first()
 
-        if (r.status === "change_password_required") {
-            alert("Primeiro acesso! Verifique seu e-mail para criar sua senha.");
-            return;
-        }
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Token inválido.")
 
-        if (r.token) {
-            localStorage.setItem("token", r.token);
-            localStorage.setItem("user_id", r.user_id);
+    if not usuario.reset_token_expires_at or usuario.reset_token_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Token expirado.")
 
-            window.location.href = "painel.html";
-        }
+    usuario.senha_hash = hash_senha(data.nova_senha)
+    usuario.reset_token = None
+    usuario.reset_token_expires_at = None
+    usuario.first_login_must_change = False
 
-    } catch (e) {
-        alert("Erro ao fazer login: " + e.message);
+    db.commit()
+    db.refresh(usuario)
+
+    return {"status": "success", "message": "Senha atualizada com sucesso!"}
+
+
+# ======================================
+# ROTA: RECUPERAR SENHA (GERAR NOVA)
+# ======================================
+
+@router.post("/recover")
+def recover(data: schemas.PasswordReset, db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
+
+    if not usuario:
+        raise HTTPException(status_code=400, detail="E-mail não encontrado.")
+
+    nova = gerar_senha_aleatoria()
+    usuario.senha_hash = hash_senha(nova)
+
+    db.commit()
+    db.refresh(usuario)
+
+    try:
+        enviar_email_nova_senha(usuario, nova)
+    except Exception as e:
+        print(f"Falha ao enviar e-mail de nova senha: {e}")
+
+    return {
+        "status": "ok",
+        "message": "Uma nova senha foi gerada. Caso não receba o e-mail, solicite suporte."
     }
-}
-
-
-// =====================
-// RECUPERAR SENHA
-// =====================
-async function recuperarSenha() {
-    const email = document.getElementById("rec_email").value;
-
-    try {
-        const r = await api(
-            "https://painel-afiliados-production.up.railway.app/api/auth/recover",
-            "POST",
-            { email }
-        );
-
-        alert("Nova senha enviada ao e-mail.");
-        window.location.href = "index.html";
-
-    } catch (e) {
-        alert("Erro: " + e.message);
-    }
-}
-
-function cadastrarPrompt() {
-  window.location.href = "cadastro.html";
-}
