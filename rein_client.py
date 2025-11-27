@@ -1,18 +1,63 @@
 # -*- coding: utf-8 -*-
 import requests
 from typing import Any, Dict, List, Optional, Tuple
+import re as _re
+
 import config
 
 session = requests.Session()
 
-EP_LIST = "/api/v1/produto"         # GET ?page=1&termo={sku}
-# detalhe usa /api/v1/produto/{id}
+EP_LIST = "/api/v1/produto"   # GET ?page=1&termo={sku}
+EP_PESSOA = "/api/v1/pessoa"  # PUT /api/v1/pessoa  | GET ?termo=...&page=1
 
 
-def _get(path: str, **kw):
+# ============================================================
+# HELPERS HTTP (REIN)
+# ============================================================
+
+def _get(path: str, **kw) -> requests.Response:
+    """
+    GET na REIN usando o esquema de HMAC do config.rein_headers(endpoint_path).
+    """
     url = f"{config.REIN_BASE}{path}"
-    return session.get(url, headers=config.rein_headers(path), timeout=60, **kw)
+    resp = session.get(url, headers=config.rein_headers(path), timeout=60, **kw)
+    resp.raise_for_status()
+    return resp
 
+
+def _put_json(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    PUT na REIN com JSON, retornando o JSON já desserializado.
+    Em erro HTTP, levanta RuntimeError com status + trecho da resposta,
+    para ajudar a debugar.
+    """
+    url = f"{config.REIN_BASE}{path}"
+    headers = config.rein_headers(path)
+    headers["Content-Type"] = "application/json"
+
+    resp = session.put(url, headers=headers, json=body, timeout=60)
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as e:
+        preview = ""
+        try:
+            preview = (resp.text or "")[:400]
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Erro ao fazer PUT {path} na REIN "
+            f"(status={resp.status_code}): {preview}"
+        ) from e
+
+    data = resp.json() or {}
+    if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
+        return data["data"]
+    return data
+
+
+# ============================================================
+# PRODUTO – já existentes no seu projeto
+# ============================================================
 
 def _parse_locais(grade: Dict[str, Any]) -> List[Dict[str, Any]]:
     locais = []
@@ -22,9 +67,7 @@ def _parse_locais(grade: Dict[str, Any]) -> List[Dict[str, Any]]:
             {
                 "id": lobj.get("Id") or l.get("LocalId"),
                 "nome": lobj.get("Nome") or "Sem nome",
-                "saldo": float(
-                    l.get("EstoqueDisponivel") or l.get("Saldo") or 0
-                ),
+                "saldo": float(l.get("EstoqueDisponivel") or l.get("Saldo") or 0),
                 "margens": [
                     {
                         "tabela": (m.get("TabelaPreco") or {}).get("Nome") or "",
@@ -62,7 +105,8 @@ def _agregar_precos_por_tabela(locais: List[Dict[str, Any]]) -> List[Dict[str, A
 
 
 def _match_grade_by_sku(
-    items: List[Dict[str, Any]], sku: str
+    items: List[Dict[str, Any]],
+    sku: str,
 ) -> Optional[Tuple[Dict[str, Any], Dict[str, Any]]]:
     """
     Retorna (produto_item, grade) cujo ProdutoGrade.Sku == sku.
@@ -82,7 +126,6 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
     """
     # Etapa 1: listar
     r1 = _get(EP_LIST, params={"page": 1, "termo": sku})
-    r1.raise_for_status()
     items = (r1.json().get("data") or {}).get("items", [])
     hit = _match_grade_by_sku(items, sku)
     if not hit:
@@ -97,7 +140,6 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
     # Etapa 2: detalhe por ID
     ep_id = f"/api/v1/produto/{prod_id}"
     r2 = _get(ep_id)
-    r2.raise_for_status()
     det = (r2.json() or {}).get("data") or {}
 
     # tenta achar a mesma grade dentro do detalhe (para pegar locais/preços atualizados)
@@ -130,49 +172,34 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
 
 
 # ============================================================
-# PESSOAS (vínculo afiliado x cliente REIN)
+# PESSOA – integração para cadastro/vínculo de afiliado
 # ============================================================
-
-import re as _re
-
-EP_PESSOA = "/api/v1/pessoa"
-
 
 def _format_documento(doc: str) -> str:
     """
-    Normaliza CPF/CNPJ removendo não dígitos e aplica máscara
-    no formato aceito pela REIN, igual ao que é usado no Postman.
+    Normaliza CPF/CNPJ (só dígitos) e aplica a máscara padrão
+    usada no Postman:
+
+      - CPF:  000.000.000-00
+      - CNPJ: 00.000.000/0000-00
     """
     digits = _re.sub(r"\D", "", doc or "")
     if len(digits) == 11:
         return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
     if len(digits) == 14:
         return f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
-    return digits  # devolve sem máscara se não bater 11/14
+    return digits
 
 
 def buscar_pessoa_por_documento(documento: str):
     """
-    Consulta /api/v1/pessoa?termo=DOCUMENTO&page=1
-    e retorna o ID da primeira pessoa encontrada.
-
-    Em caso de erro HTTP, levanta RuntimeError com trecho da resposta
-    para facilitar o debug no log do Railway.
+    Consulta /api/v1/pessoa?termo={documento}&page=1
+    e retorna o ID da primeira pessoa encontrada na Rein.
+    Caso não encontre, retorna None.
     """
     termo = _format_documento(documento)
-    try:
-        resp = _get(EP_PESSOA, params={"page": 1, "termo": termo})
-        resp.raise_for_status()
-    except requests.HTTPError as e:
-        preview = ""
-        try:
-            preview = (resp.text or "")[:400]
-        except Exception:
-            pass
-        raise RuntimeError(
-            f"Erro ao buscar pessoa na REIN (status={getattr(resp, 'status_code', '?')}): {preview}"
-        ) from e
 
+    resp = _get(EP_PESSOA, params={"page": 1, "termo": termo})
     data = resp.json() or {}
     items = (data.get("data") or {}).get("items") or []
 
@@ -180,57 +207,21 @@ def buscar_pessoa_por_documento(documento: str):
         return None
 
     pessoa = items[0]
-    # API pode retornar diferentes chaves para o ID
-    return (
-        pessoa.get("Id")
-        or pessoa.get("id")
-        or pessoa.get("intId")
-    )
-
-
-def _put_json(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Faz PUT na REIN com HMAC via config.rein_headers(path)
-    e devolve o JSON já desserializado.
-
-    Em erro HTTP levanta RuntimeError com preview da resposta
-    para facilitar o debug.
-    """
-    url = f"{config.REIN_BASE}{path}"
-    headers = config.rein_headers(path)
-    try:
-        resp = session.put(url, headers=headers, json=body, timeout=60)
-        resp.raise_for_status()
-    except requests.HTTPError as e:
-        preview = ""
-        try:
-            preview = (resp.text or "")[:400]
-        except Exception:
-            pass
-        raise RuntimeError(
-            f"Erro ao fazer PUT {path} na REIN (status={getattr(resp, 'status_code', '?')}): {preview}"
-        ) from e
-
-    data = resp.json() or {}
-
-    # Alguns endpoints da REIN vêm embrulhados em {"data": {...}}
-    if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
-        return data["data"]
-    return data
+    return pessoa.get("Id") or pessoa.get("id") or pessoa.get("intId")
 
 
 def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
     """
-    Cria um cliente na REIN usando o endpoint /api/v1/pessoa (PUT),
-    seguindo o modelo do Postman.
+    Cria um cliente na REIN usando o endpoint PUT /api/v1/pessoa,
+    no mesmo formato do exemplo "Cadastrar Pessoa" do Postman.
 
-    Espera no mínimo:
+    Espera um dict com pelo menos:
       - cpf_cnpj
-      - tipo_pessoa ("F" ou "J") [opcional, inferimos pelo tamanho se não vier]
       - nome
       - email
       - telefone
       - cep, endereco, numero, bairro, cidade, estado
+      - tipo_pessoa (opcional; se não vier, inferimos por tamanho do doc)
     """
     doc = _format_documento(usuario_data.get("cpf_cnpj", ""))
     digits = _re.sub(r"\D", "", doc or "")
@@ -238,11 +229,10 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
     if len(digits) == 11:
         tipo = "F"
     else:
-        # Se não bater 11, tratamos como jurídica por padrão
         tipo = "J"
 
     payload: Dict[str, Any] = {
-        "CanalVendaId": 4,           # canal de venda informado
+        "CanalVendaId": 4,           # conforme combinado (canal de afiliados)
         "UsuarioTecnicoId": 1,
         "UsuarioVendedorId": 1,
         "EnviarEcf": True,
@@ -328,14 +318,11 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
     }
 
     data = _put_json(EP_PESSOA, payload)
-    pessoa_id = (
-        data.get("Id")
-        or data.get("id")
-        or data.get("intId")
-    )
+    pessoa_id = data.get("Id") or data.get("id") or data.get("intId")
+
     if not pessoa_id:
         raise RuntimeError(
-            f"Não foi possível obter o ID da pessoa criada na REIN: {data}"
+            f"Resposta da REIN ao cadastrar pessoa não retornou Id: {data}"
         )
 
     return int(pessoa_id)
