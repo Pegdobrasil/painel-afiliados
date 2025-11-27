@@ -104,6 +104,31 @@ def enviar_email_nova_senha(usuario: Usuario, senha: str) -> None:
 # ======================================
 # ROTA: CADASTRO DE USUÁRIO
 # ======================================
+// CEP
+async function buscarCep() {
+  const cep = onlyDigits(v("cep"));
+  if (cep.length !== 8) return;
+
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await res.json();
+    if (data.erro) {
+      notify("CEP não encontrado.");
+      return;
+    }
+    if (document.getElementById("logradouro"))
+      document.getElementById("logradouro").value = data.logradouro || "";
+    if (document.getElementById("bairro"))
+      document.getElementById("bairro").value = data.bairro || "";
+    if (document.getElementById("cidade"))
+      document.getElementById("cidade").value = data.localidade || "";
+    if (document.getElementById("uf"))
+      document.getElementById("uf").value = (data.uf || "").toUpperCase();
+  } catch (err) {
+    console.error(err);
+    notify("Não foi possível consultar o CEP.");
+  }
+}
 
 @router.post("/register")
 def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
