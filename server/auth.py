@@ -88,7 +88,7 @@ def enviar_email_nova_senha(usuario: Usuario, senha: str):
     <p>Olá, {usuario.nome}!</p>
     <p>Sua nova senha é: <strong>{senha}</strong></p>
     <p>Você pode alterá-la a qualquer momento no painel.</p>
-    ""
+    """
 
     send_email(
         to_email=usuario.email,
