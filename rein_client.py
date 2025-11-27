@@ -28,8 +28,8 @@ def _get(path: str, **kw) -> requests.Response:
 def _put_json(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
     """
     PUT na REIN com JSON, retornando o JSON já desserializado.
-    Em erro HTTP, levanta RuntimeError com status + trecho da resposta,
-    para ajudar a debugar.
+    Em erro HTTP, levanta RuntimeError com status + trecho da resposta
+    para facilitar debug.
     """
     url = f"{config.REIN_BASE}{path}"
     headers = config.rein_headers(path)
@@ -177,8 +177,8 @@ def buscar_por_sku_duas_etapas(sku: str) -> Optional[Dict[str, Any]]:
 
 def _format_documento(doc: str) -> str:
     """
-    Normaliza CPF/CNPJ (só dígitos) e aplica a máscara padrão
-    usada no Postman:
+    Normaliza CPF/CNPJ (só dígitos) e aplica a máscara
+    que a Rein está usando:
 
       - CPF:  000.000.000-00
       - CNPJ: 00.000.000/0000-00
@@ -191,15 +191,25 @@ def _format_documento(doc: str) -> str:
     return digits
 
 
+
 def buscar_pessoa_por_documento(documento: str):
     """
     Consulta /api/v1/pessoa?termo={documento}&page=1
-    e retorna o ID da primeira pessoa encontrada na Rein.
-    Caso não encontre, retorna None.
+    e retorna o ID da primeira pessoa encontrada na Rein
+    (ou None se não achar).
     """
     termo = _format_documento(documento)
 
-    resp = _get(EP_PESSOA, params={"page": 1, "termo": termo})
+    params = {
+        "page": 1,
+        "termo": termo,
+        # replica os filtros que funcionaram no seu curl
+        "tipoPessoa": "PF ou PJ",
+        "status": "ativo, excluido ou inativo",
+        "tipoCliente": "empresa, cliente, fornecedor, funcionario ou transportadora",
+    }
+
+    resp = _get(EP_PESSOA, params=params)
     data = resp.json() or {}
     items = (data.get("data") or {}).get("items") or []
 
@@ -210,29 +220,23 @@ def buscar_pessoa_por_documento(documento: str):
     return pessoa.get("Id") or pessoa.get("id") or pessoa.get("intId")
 
 
+
 def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
     """
     Cria um cliente na REIN usando o endpoint PUT /api/v1/pessoa,
-    no mesmo formato do exemplo "Cadastrar Pessoa" do Postman.
+    seguindo o modelo do Postman.
 
-    Espera um dict com pelo menos:
-      - cpf_cnpj
-      - nome
-      - email
-      - telefone
-      - cep, endereco, numero, bairro, cidade, estado
-      - tipo_pessoa (opcional; se não vier, inferimos por tamanho do doc)
+    IMPORTANTE:
+    - A REIN guarda CPF e CNPJ SEMPRE em Cnpj (mesmo PF).
     """
     doc = _format_documento(usuario_data.get("cpf_cnpj", ""))
     digits = _re.sub(r"\D", "", doc or "")
 
-    if len(digits) == 11:
-        tipo = "F"
-    else:
-        tipo = "J"
+    # Usamos TipoPessoa só para classificação interna
+    tipo = "F" if len(digits) == 11 else "J"
 
     payload: Dict[str, Any] = {
-        "CanalVendaId": 4,           # conforme combinado (canal de afiliados)
+        "CanalVendaId": 4,           # canal de venda de afiliados que você comentou
         "UsuarioTecnicoId": 1,
         "UsuarioVendedorId": 1,
         "EnviarEcf": True,
@@ -241,8 +245,10 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
         "Crt": 0,
         "IndicadorInscricaoEstadual": 0,
         "Cnae": "",
-        "Cnpj": doc if tipo == "J" else "",
-        "Cpf": doc if tipo == "F" else "",
+        # <<< aqui está a correção principal:
+        # sempre mandar o documento (CPF OU CNPJ) no campo Cnpj
+        "Cnpj": doc,
+        # não enviamos campo Cpf, a API não usa
         "DataCadastro": "",
         "DataFundacao": "",
         "DataUltimaModificacao": "",
@@ -298,8 +304,8 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
         "TabelaPrecoPermissaoVinculo": [
             {
                 "Id": 1,
-                "Nome": "",
-                "Identificador": "",
+                "Nome": "string",
+                "Identificador": "string",
                 "MostrarPrecoLojaVirtual": True,
                 "Padrao": True,
             }
@@ -309,11 +315,12 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
         "TipoCliente": [
             {
                 "Id": 1,
-                "Nome": "",
+                "Nome": "CLIENTE",
             }
         ],
+        # aqui eu já mando 91 que é o id que aparece no seu cadastro exemplo
         "UsoMercadoriaConstanteFiscal": {
-            "Id": 0
+            "Id": 91
         },
     }
 
@@ -326,3 +333,4 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
         )
 
     return int(pessoa_id)
+
