@@ -220,17 +220,35 @@ def buscar_pessoa_por_documento(documento: str):
     return pessoa.get("Id") or pessoa.get("id") or pessoa.get("intId")
 
 
-
 def criar_cliente_rein(usuario_data: dict) -> int:
-    endpoint = "/api/v1/pessoa"
-    headers = rein_headers(endpoint)
-    url = REIN_BASE + endpoint
+    """
+    Cria um cliente na REIN usando PUT /api/v1/pessoa.
 
-    # Documento vindo do cadastro do afiliado
+    Espera em usuario_data:
+      - cpf_cnpj
+      - tipo_pessoa ('PF' ou 'PJ')
+      - nome
+      - email
+      - telefone
+      - cep, endereco, numero, bairro, cidade, estado
+    """
+
+    endpoint = "/api/v1/pessoa"
+    url = REIN_BASE + endpoint
+    headers = rein_headers(endpoint)
+
+    # documento vem só com dígitos no painel; aqui aplicamos máscara
     raw_doc = usuario_data["cpf_cnpj"]
-    doc = aplicar_mascara_documento(raw_doc)
-    digits = re.sub(r"\D", "", doc)
-    tipo = "F" if len(digits) == 11 else "J"
+    digits = re.sub(r"\D", "", raw_doc or "")
+
+    if len(digits) == 11:
+        # CPF
+        doc_masked = f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+        tipo_pessoa = "F"
+    else:
+        # CNPJ
+        doc_masked = f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
+        tipo_pessoa = "J"
 
     payload = {
         # cabeçalho da pessoa (segue o modelo funcional / Postman)
@@ -337,16 +355,19 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         }
     }
 
-    resp = requests.put(url, headers=headers, json=payload, timeout=20)
+    resp = requests.put(url, headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
 
-    data = resp.json()
-    inner = data.get("data") or data
-    pessoa_id = inner.get("Id") or inner.get("intId") or inner.get("id")
+    body = resp.json() or {}
+    data = body.get("data") or body
+
+    # exemplo: { "status": 200, "data": { "Id": 156026, "Nome": "...", "sucesso": true } }
+    pessoa_id = data.get("Id") or data.get("id") or data.get("intId")
 
     if not pessoa_id:
-        raise RuntimeError(f"Falha ao obter ID ao criar pessoa na Rein: {data}")
+        raise RuntimeError(f"Resposta da REIN não retornou Id ao criar pessoa: {body}")
 
     return int(pessoa_id)
+
 
 
