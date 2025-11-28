@@ -234,7 +234,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
     """
 
     endpoint = "/api/v1/pessoa"
-    url = REIN_BASE + endpoint
+    url = {config.REIN_BASE} + endpoint
     headers = rein_headers(endpoint)
 
     # documento vem só com dígitos no painel; aqui aplicamos máscara
@@ -368,6 +368,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         raise RuntimeError(f"Resposta da REIN não retornou Id ao criar pessoa: {body}")
 
     return int(pessoa_id)
+
 
 
 
