@@ -1,13 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+ffrom fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from typing import Optional
+
 import secrets
 import string
 import re
 
+from pydantic import BaseModel
+
 from .database import get_db, Base, engine
-from .models import Usuario
+from .models import Usuario, AccessToken
 from . import schemas
 from .email_config import send_email
 import rein_client
@@ -18,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 router = APIRouter()
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
 
 
 # =====================================================
