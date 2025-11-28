@@ -60,7 +60,7 @@ def _put_json(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
 # ============================================================
 
 def _parse_locais(grade: Dict[str, Any]) -> List[Dict[str, Any]]:
-    locais = []
+    locais: List[Dict[str, Any]] = []
     for l in (grade.get("ProdutoLocal") or []):
         lobj = l.get("Local") or {}
         locais.append(
@@ -191,7 +191,6 @@ def _format_documento(doc: str) -> str:
     return digits
 
 
-
 def buscar_pessoa_por_documento(documento: str):
     """
     Consulta /api/v1/pessoa?termo={documento}&page=1
@@ -233,28 +232,23 @@ def criar_cliente_rein(usuario_data: dict) -> int:
       - cep, endereco, numero, bairro, cidade, estado
     """
 
-    endpoint = "/api/v1/pessoa"
-    url = config.REIN_BASE + endpoint
-    headers = config.rein_headers(endpoint)
-
-    # documento vem só com dígitos no painel; aqui aplicamos máscara
+    # documento vem do painel; normalizamos e mascaramos
     raw_doc = usuario_data["cpf_cnpj"]
-    digits = re.sub(r"\D", "", raw_doc or "")
+    doc_masked = _format_documento(raw_doc)
+    digits = _re.sub(r"\D", "", doc_masked or "")
 
     if len(digits) == 11:
         # CPF
-        doc_masked = f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
         tipo_pessoa = "F"
     else:
         # CNPJ
-        doc_masked = f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
         tipo_pessoa = "J"
 
     payload = {
-        # cabeçalho da pessoa (segue o modelo funcional / Postman)
-        "CanalVendaId": 1001,          # você comentou que o canal de venda, por enquanto, é 4
+        # cabeçalho da pessoa (segue o modelo funcional que você mandou)
+        "CanalVendaId": 1001,       # canal usado no exemplo funcional de CNPJ
         "UsuarioTecnicoId": 1,
-        "UsuarioVendedorId": 457,   # mesmo vendedor que aparece nos cadastros gerados pela Magazord
+        "UsuarioVendedorId": 457,
         "EnviarEcf": True,
         "CreditoDevolucao": 0,
         "LimiteDeCredito": 0,
@@ -262,7 +256,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         "IndicadorInscricaoEstadual": 0,
         "Cnae": "",
         # A Rein usa SEMPRE o campo Cnpj, mesmo para pessoa física
-        "Cnpj": doc,
+        "Cnpj": doc_masked,
         "DataCadastro": "",
         "DataFundacao": "",
         "DataUltimaModificacao": "",
@@ -272,11 +266,11 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         "InscricaoEstadual": "",
         "Nome": usuario_data["nome"],
         "RazaoSocial": usuario_data["nome"],
-        "Observacao": "Cliente Gerado Automáticamente - Afiliado",
+        "Observacao": "Cliente Gerado Automaticamente - Afiliado",
         "ObservacaoFiscal": "",
         "PerfilFornecedor": "",
         "PrazoLimiteCredito": "",
-        "TipoPessoa": tipo,         # "F" ou "J"
+        "TipoPessoa": tipo_pessoa,  # "F" ou "J"
         "Mei": False,
         "Sexo": "",
 
@@ -286,7 +280,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "Id": 8,
                 "TipoCadastroId": 8,
                 "Principal": True,
-                "Email": usuario_data["email"]
+                "Email": usuario_data["email"],
             }
         ],
 
@@ -301,13 +295,13 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "Logradouro": usuario_data["endereco"],
                 "Numero": usuario_data["numero"],
                 "Bairro": usuario_data["bairro"],
-                "Complemento": "",
+                "Complemento": usuario_data.get("complemento") or "",
                 "Cep": usuario_data["cep"],
                 "Principal": True,
                 "Entrega": True,
                 "Retirada": True,
                 "Cobranca": True,
-                "Observacao": "Cadastro automático"
+                "Observacao": "Cadastro automático",
             }
         ],
 
@@ -318,7 +312,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "TipoCadastroId": 8,
                 "Nome": "",
                 "Principal": True,
-                "Telefone": usuario_data.get("telefone") or ""
+                "Telefone": usuario_data.get("telefone") or "",
             }
         ],
 
@@ -329,7 +323,7 @@ def criar_cliente_rein(usuario_data: dict) -> int:
                 "Nome": "",
                 "Identificador": "",
                 "MostrarPrecoLojaVirtual": True,
-                "Padrao": True
+                "Padrao": True,
             }
         ],
         "TabelaPrecoPrincipal": {},
@@ -338,39 +332,32 @@ def criar_cliente_rein(usuario_data: dict) -> int:
         "CondicaoPagamentoBloqueado": [
             {
                 "Id": 1,
-                "Nome": "string"
+                "Nome": "string",
             }
-          ],
+        ],
+
         # Tipo de cliente
         "TipoCliente": [
             {
                 "Id": 1,
-                "Nome": "Cliente"
+                "Nome": "Cliente",
             }
         ],
 
         # Uso da mercadoria
         "UsoMercadoriaConstanteFiscal": {
             "Id": 0
-        }
+        },
     }
 
-    resp = requests.put(url, headers=headers, json=payload, timeout=30)
-    resp.raise_for_status()
+    # Usa helper que já monta URL + headers baseado no config.py
+    data = _put_json(EP_PESSOA, payload)
 
-    body = resp.json() or {}
-    data = body.get("data") or body
-
-    # exemplo: { "status": 200, "data": { "Id": 156026, "Nome": "...", "sucesso": true } }
+    # exemplo de retorno:
+    # { "status": 200, "data": { "Id": 156026, "Nome": "...", "sucesso": true } }
     pessoa_id = data.get("Id") or data.get("id") or data.get("intId")
 
     if not pessoa_id:
-        raise RuntimeError(f"Resposta da REIN não retornou Id ao criar pessoa: {body}")
+        raise RuntimeError(f"Resposta da REIN não retornou Id ao criar pessoa: {data}")
 
     return int(pessoa_id)
-
-
-
-
-
-
