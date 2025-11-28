@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from .database import Base
+from datetime import datetime
 
 
 class Usuario(Base):
@@ -30,3 +31,13 @@ class Usuario(Base):
 
     # Flag futura de segurança (primeiro acesso obrigatório trocar senha)
     first_login_must_change = Column(Boolean, default=False)
+
+    # Novo: controle de ativação da conta (e-mail)
+    ativo = Column(Boolean, default=False)
+
+    # Token de verificação enviado por e-mail (primeiro acesso)
+    verification_token = Column(String, nullable=True, index=True)
+    verification_token_expires_at = Column(DateTime, nullable=True)
+
+    # Opcional: token de sessão / API por usuário
+    api_token = Column(String, nullable=True, index=True)
