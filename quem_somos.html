@@ -32,9 +32,9 @@
     }
 
     .fade-in-up {
-      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       opacity: 0;
-      transform: translateY(30px);
+      transform: translateY(20px);
     }
     @keyframes fadeInUp {
       to {
@@ -49,6 +49,21 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-image: linear-gradient(to right, #38bdf8, #818cf8);
+    }
+
+    /* Inputs Dark (Vindo do cadastro (1).html) */
+    .input-dark {
+      background-color: rgb(15 23 42); /* slate-900 */
+      border-color: rgb(51 65 85); /* slate-700 */
+      color: rgb(241 245 249); /* slate-100 */
+    }
+    .input-dark:focus {
+      border-color: rgb(14 165 233); /* sky-500 */
+      outline: 2px solid rgba(14, 165, 233, 0.4);
+      outline-offset: -1px;
+    }
+    .input-dark::placeholder {
+      color: rgb(100 116 139); /* slate-500 */
     }
 
     /* WHATSAPP FLUTUANTE */
@@ -116,23 +131,24 @@
           </div>
         </div>
 
-        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-          <!-- BOTÃO LOGIN (Link sutil) -->
-          <button id="openLoginModal" class="text-slate-400 hover:text-white transition flex items-center gap-2 group px-2 py-1">
+        <!-- NAV -->
+        <nav class="hidden md:flex items-center gap-4 text-sm font-medium">
+          <!-- Botão Login -->
+          <button id="openLoginModal" class="px-4 py-2 text-slate-400 hover:text-white transition flex items-center gap-2 group hover:bg-slate-800/50 rounded-lg cursor-pointer">
             <i data-lucide="log-in" class="w-4 h-4 group-hover:stroke-sky-400 transition"></i>
             Login
           </button>
           
-          <!-- BOTÃO CADASTRO (Botão Primário Destacado) -->
-          <a href="cadastro.html" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-900/30 transition transform hover:-translate-y-0.5 active:scale-95 text-xs font-semibold tracking-wide border border-sky-500/50">
+          <!-- Botão Cadastro (Abre Modal) -->
+          <button id="openCadastroModal" class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-900/30 transition transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide border border-sky-500/50 cursor-pointer">
             <i data-lucide="user-plus" class="w-4 h-4"></i>
-            Criar Cadastro
-          </a>
+            CRIAR CADASTRO
+          </button>
         </nav>
       </div>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL (Scrollável) -->
+    <!-- CONTEÚDO PRINCIPAL -->
     <main class="flex-1 overflow-y-auto bg-slate-950/40 scroll-smooth">
 
       <!-- HERO SECTION -->
@@ -159,11 +175,12 @@
             </p>
 
             <div class="pt-2 flex flex-wrap gap-4">
-              <a href="cadastro.html"
-                 class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transform hover:-translate-y-1 transition-all duration-200">
+              <!-- Botão Hero (Abre Modal Cadastro) -->
+              <button onclick="document.getElementById('openCadastroModal').click()"
+                 class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transform hover:-translate-y-1 transition-all duration-200 cursor-pointer">
                 Quero ser afiliado
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
-              </a>
+              </button>
             </div>
           </div>
 
@@ -226,19 +243,16 @@
           </div>
 
           <div class="grid md:grid-cols-3 gap-6">
-             <!-- Card Produto 1 -->
              <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
                 <i data-lucide="smartphone" class="w-8 h-8 text-slate-500 group-hover:text-sky-400 transition mb-4"></i>
                 <h3 class="text-slate-200 font-semibold mb-2">Acessórios Móveis</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">Capas, películas e cabos de alta rotatividade para bancas e lojas.</p>
              </div>
-             <!-- Card Produto 2 -->
              <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
                 <i data-lucide="zap" class="w-8 h-8 text-slate-500 group-hover:text-yellow-400 transition mb-4"></i>
                 <h3 class="text-slate-200 font-semibold mb-2">Energia e Carga</h3>
                 <p class="text-xs text-slate-500 leading-relaxed">Carregadores homologados e fontes potentes que garantem qualidade.</p>
              </div>
-             <!-- Card Produto 3 -->
              <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
                 <i data-lucide="headphones" class="w-8 h-8 text-slate-500 group-hover:text-indigo-400 transition mb-4"></i>
                 <h3 class="text-slate-200 font-semibold mb-2">Áudio e Eletrônicos</h3>
@@ -258,7 +272,7 @@
         </div>
       </section>
 
-      <!-- SEÇÃO 2: COMO FUNCIONA (Passo a passo visual) -->
+      <!-- SEÇÃO 2: COMO FUNCIONA -->
       <section class="px-6 md:px-10 py-16 border-b border-slate-800/60">
         <div class="max-w-5xl mx-auto">
           <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-10">
@@ -271,9 +285,7 @@
             </p>
           </div>
 
-          <!-- Grid de Passos -->
           <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Passo 1 -->
             <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
               <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">1</span>
               <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center mb-4 shadow-lg shadow-sky-500/20">
@@ -283,7 +295,6 @@
               <p class="text-xs text-slate-400">Crie sua conta com dados completos (PF ou PJ).</p>
             </div>
 
-            <!-- Passo 2 -->
             <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
               <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">2</span>
               <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
@@ -293,7 +304,6 @@
               <p class="text-xs text-slate-400">Integre seus canais de venda ou marketplaces.</p>
             </div>
 
-            <!-- Passo 3 -->
             <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
               <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">3</span>
               <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
@@ -303,7 +313,6 @@
               <p class="text-xs text-slate-400">Use nosso catálogo nos seus anúncios.</p>
             </div>
 
-            <!-- Passo 4 -->
             <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
               <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">4</span>
               <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
@@ -328,14 +337,15 @@
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-3 shrink-0">
-            <a href="cadastro.html"
-               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transition">
+            <!-- Botão Footer (Abre Modal Cadastro) -->
+            <button onclick="document.getElementById('openCadastroModal').click()"
+               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transition cursor-pointer">
               Criar meu acesso
-            </a>
-            <a href="index.html"
-               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition">
+            </button>
+            <button onclick="document.getElementById('openLoginModal').click()"
+               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition cursor-pointer">
               Fazer Login
-            </a>
+            </button>
           </div>
         </div>
       </section>
@@ -354,7 +364,7 @@
       </div>
     </footer>
 
-    <!-- MODAL LOGIN (Código preservado para funcionalidade) -->
+    <!-- MODAL LOGIN -->
     <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-start pt-10 md:pt-16 overflow-y-auto z-50 transition-opacity duration-300">
       <div class="fade-in-up w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden relative p-8 mx-4">
         
@@ -377,7 +387,7 @@
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <i data-lucide="mail" class="w-4 h-4"></i>
               </div>
-              <input id="email" type="email" placeholder="seu@email.com" class="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50">
+              <input id="email_login" type="email" placeholder="seu@email.com" class="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50 input-dark">
             </div>
           </div>
 
@@ -387,9 +397,9 @@
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <i data-lucide="lock" class="w-4 h-4"></i>
               </div>
-              <input id="senha" type="password" placeholder="••••••••" class="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50">
-              <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer">
-                <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              <input id="senha_login" type="password" placeholder="••••••••" class="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50 input-dark">
+              <button type="button" onclick="toggleLoginPassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer">
+                <i id="eye-icon-login" data-lucide="eye" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
@@ -401,7 +411,151 @@
 
         <div class="mt-6 text-center">
           <p class="text-xs text-slate-500">
-            Ainda não tem acesso? <a href="cadastro.html" class="text-sky-400 hover:text-sky-300 font-medium transition-colors">Cadastre-se</a>
+            Ainda não tem acesso? 
+            <button onclick="document.getElementById('closeLoginModal').click(); setTimeout(() => document.getElementById('openCadastroModal').click(), 200);" class="text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer">
+              Cadastre-se
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL CADASTRO COMPLETO (Baseado no cadastro (1).html) -->
+    <div id="cadastroModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-start pt-5 md:pt-10 overflow-y-auto z-50 transition-opacity duration-300">
+      <div class="fade-in-up w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden relative p-8 mx-4 mb-10">
+        
+        <button id="closeCadastroModal" type="button" class="absolute top-4 right-4 text-slate-500 hover:text-slate-200 p-1 hover:bg-slate-900 rounded-lg transition z-10">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="text-center mb-6">
+          <img
+            src="https://pegdobrasil.cdn.magazord.com.br/img/2025/11/produto/161412/logobonita-e-formosa.png"
+            alt="PEG do Brasil"
+            class="h-10 w-auto mx-auto drop-shadow-md mb-2"
+          >
+          <h1 class="text-xl font-bold text-slate-50">Crie sua Conta</h1>
+          <p class="text-slate-400 text-xs mt-1">Preencha os dados abaixo para se tornar um afiliado.</p>
+        </div>
+
+        <div class="space-y-6">
+          
+          <!-- Seção 1: Dados Pessoais -->
+          <section class="space-y-4">
+            <h2 class="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-800">
+              <i data-lucide="user" class="w-3 h-3"></i> Dados Pessoais
+            </h2>
+
+            <!-- Select Oculto para lógica -->
+            <select id="tipo_pessoa" class="hidden"><option value="PF">PF</option><option value="PJ">PJ</option></select>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- CPF/CNPJ -->
+              <div class="relative">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">CPF / CNPJ</label>
+                <input id="cpf_cnpj" type="text" placeholder="Apenas números" maxlength="18" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+                <span id="cpf-cnpj-error" class="hidden absolute -bottom-4 left-1 text-[9px] text-red-400 font-medium">Inválido</span>
+              </div>
+
+              <!-- Nome -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Nome completo / Razão social</label>
+                <input id="nome" type="text" placeholder="Seu nome" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- Email -->
+              <div class="relative">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Email</label>
+                <input id="email" type="email" placeholder="seu@email.com" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+                <span id="email-error" class="hidden absolute -bottom-4 left-1 text-[9px] text-red-400 font-medium">Email inválido</span>
+              </div>
+
+              <!-- Telefone -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Telefone / Celular</label>
+                <input id="telefone" type="tel" maxlength="15" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- Senha -->
+              <div class="md:col-span-2 relative">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Senha</label>
+                <div class="relative">
+                   <input id="senha" type="password" placeholder="********" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all pr-24">
+                   <div class="absolute inset-y-0 right-3 flex items-center gap-2 pointer-events-none">
+                      <span id="senha-texto" class="text-[10px] font-semibold text-slate-500"></span>
+                      <div id="senha-indicador" class="w-2.5 h-2.5 rounded-full bg-slate-700 transition-colors duration-300"></div>
+                   </div>
+                </div>
+                <span id="senha-error" class="hidden text-[9px] text-red-400 font-medium ml-1 mt-1 block">Mínimo 8 caracteres</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Seção 2: Endereço -->
+          <section class="space-y-4">
+            <h2 class="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-800">
+              <i data-lucide="map-pin" class="w-3 h-3"></i> Endereço
+            </h2>
+
+            <div class="grid grid-cols-4 gap-4">
+              <!-- CEP -->
+              <div class="col-span-2 relative">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">CEP</label>
+                <div class="relative">
+                   <input id="cep" type="text" placeholder="00000-000" onblur="buscarCep()" maxlength="9" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+                   <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-500"><i data-lucide="search" class="w-3 h-3"></i></div>
+                </div>
+              </div>
+
+              <!-- Número -->
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Número</label>
+                <input id="numero" type="text" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- Logradouro -->
+              <div class="col-span-4">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Logradouro</label>
+                <input id="logradouro" type="text" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- Bairro -->
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Bairro</label>
+                <input id="bairro" type="text" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- Cidade -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Cidade</label>
+                <input id="cidade" type="text" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+
+              <!-- UF -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">UF</label>
+                <input id="uf" type="text" maxlength="2" class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all uppercase text-center">
+              </div>
+              
+              <!-- Complemento -->
+              <div class="col-span-4">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Complemento</label>
+                <input id="complemento" type="text" placeholder="Apto, Bloco..." class="w-full px-3 py-2.5 text-sm rounded-lg input-dark focus:outline-none transition-all">
+              </div>
+            </div>
+          </section>
+
+          <button type="button" onclick="registrar()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-sky-900/20 transition-all text-sm mt-4 transform hover:-translate-y-0.5">
+            Salvar Cadastro
+          </button>
+        </div>
+
+        <div class="mt-4 text-center">
+          <p class="text-xs text-slate-500">
+            Já tem conta? 
+            <button onclick="document.getElementById('closeCadastroModal').click(); setTimeout(() => document.getElementById('openLoginModal').click(), 200);" class="text-sky-400 hover:text-sky-300 font-medium transition-colors cursor-pointer">
+              Faça Login
+            </button>
           </p>
         </div>
       </div>
@@ -419,42 +573,258 @@
   <!-- Scripts -->
   <script src="auth.js"></script>
   <script>
-    const openLoginModalBtn = document.getElementById('openLoginModal');
+    // --- LÓGICA DE ABERTURA DOS MODAIS ---
+    const openLoginBtn = document.getElementById('openLoginModal');
     const loginModal = document.getElementById('loginModal');
-    const closeLoginModalBtn = document.getElementById('closeLoginModal');
+    const closeLoginBtn = document.getElementById('closeLoginModal');
 
-    if (openLoginModalBtn && loginModal && closeLoginModalBtn) {
-      openLoginModalBtn.addEventListener('click', () => {
-        loginModal.classList.remove('hidden');
-        loginModal.classList.add('flex');
-        if (window.lucide) lucide.createIcons();
-      });
+    const openCadastroBtn = document.getElementById('openCadastroModal');
+    const cadastroModal = document.getElementById('cadastroModal');
+    const closeCadastroBtn = document.getElementById('closeCadastroModal');
 
-      closeLoginModalBtn.addEventListener('click', () => {
-        loginModal.classList.add('hidden');
-        loginModal.classList.remove('flex');
-      });
-
-      loginModal.addEventListener('click', (event) => {
-        if (event.target === loginModal) {
-          loginModal.classList.add('hidden');
-          loginModal.classList.remove('flex');
-        }
-      });
+    function openModal(modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (window.lucide) lucide.createIcons();
     }
+
+    function closeModal(modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    if (openLoginBtn) openLoginBtn.addEventListener('click', () => openModal(loginModal));
+    if (closeLoginBtn) closeLoginBtn.addEventListener('click', () => closeModal(loginModal));
+    loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeModal(loginModal); });
+
+    if (openCadastroBtn) openCadastroBtn.addEventListener('click', () => openModal(cadastroModal));
+    if (closeCadastroBtn) closeCadastroBtn.addEventListener('click', () => closeModal(cadastroModal));
+    cadastroModal.addEventListener('click', (e) => { if (e.target === cadastroModal) closeModal(cadastroModal); });
 
     if (window.lucide) lucide.createIcons();
 
-    function togglePassword() {
-      const senhaInput = document.getElementById('senha');
-      const eyeIcon = document.getElementById('eye-icon');
+    // --- FUNÇÕES DE TOGGLE SENHA ---
+    function toggleLoginPassword() {
+      const senhaInput = document.getElementById('senha_login');
+      const eyeIcon = document.getElementById('eye-icon-login');
       if (!senhaInput) return;
       if (senhaInput.type === 'password') {
         senhaInput.type = 'text';
-        if (eyeIcon) { eyeIcon.style.opacity = '1'; eyeIcon.style.color = '#38bdf8'; }
+        if(eyeIcon) { eyeIcon.style.opacity = '1'; eyeIcon.style.color = '#38bdf8'; }
       } else {
         senhaInput.type = 'password';
-        if (eyeIcon) { eyeIcon.style.opacity = ''; eyeIcon.style.color = ''; }
+        if(eyeIcon) { eyeIcon.style.opacity = ''; eyeIcon.style.color = ''; }
+      }
+    }
+
+    // --- LÓGICA DO CADASTRO (Copiado e Adaptado do cadastro (1).html) ---
+    
+    // 1. CPF/CNPJ
+    const cpfCnpjInput = document.getElementById('cpf_cnpj');
+    const tipoPessoaSelect = document.getElementById('tipo_pessoa'); // Select oculto
+    const cpfCnpjError = document.getElementById('cpf-cnpj-error');
+
+    function validarCPF(cpf) {
+      cpf = cpf.replace(/[^\d]+/g, '');
+      if (cpf == '') return false;
+      if (cpf.length != 11 || /^(\d)\1+$/.test(cpf)) return false;
+      let add = 0;
+      for (let i = 0; i < 9; i++) add += parseInt(cpf.charAt(i)) * (10 - i);
+      let rev = 11 - (add % 11);
+      if (rev == 10 || rev == 11) rev = 0;
+      if (rev != parseInt(cpf.charAt(9))) return false;
+      add = 0;
+      for (let i = 0; i < 10; i++) add += parseInt(cpf.charAt(i)) * (11 - i);
+      rev = 11 - (add % 11);
+      if (rev == 10 || rev == 11) rev = 0;
+      if (rev != parseInt(cpf.charAt(10))) return false;
+      return true;
+    }
+
+    function validarCNPJ(cnpj) {
+      cnpj = cnpj.replace(/[^\d]+/g, '');
+      if(cnpj == '') return false;
+      if (cnpj.length != 14) return false;
+      if (/^(\d)\1+$/.test(cnpj)) return false;
+      let tamanho = cnpj.length - 2;
+      let numeros = cnpj.substring(0,tamanho);
+      let digitos = cnpj.substring(tamanho);
+      let soma = 0;
+      let pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(0)) return false;
+      tamanho = tamanho + 1;
+      numeros = cnpj.substring(0,tamanho);
+      soma = 0;
+      pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(1)) return false;
+      return true;
+    }
+
+    function verificarValidadeCpfCnpj() {
+        const val = cpfCnpjInput.value.replace(/\D/g, '');
+        let isValid = false;
+        if (val.length === 11) isValid = validarCPF(val);
+        else if (val.length === 14) isValid = validarCNPJ(val);
+        else if (val.length === 0) isValid = true; 
+
+        if (!isValid && val.length > 0) {
+            cpfCnpjError.classList.remove('hidden');
+            cpfCnpjInput.classList.add('border-red-500');
+            cpfCnpjInput.classList.remove('focus:ring-sky-500/40');
+        } else {
+            cpfCnpjError.classList.add('hidden');
+            cpfCnpjInput.classList.remove('border-red-500');
+        }
+    }
+
+    cpfCnpjInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); 
+      if (value.length > 11) {
+        tipoPessoaSelect.value = 'PJ';
+        e.target.value = value
+          .replace(/^(\d{2})(\d)/, '$1.$2')
+          .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+          .replace(/\.(\d{3})(\d)/, '.$1/$2')
+          .replace(/(\d{4})(\d)/, '$1-$2')
+          .slice(0, 18);
+      } else {
+        tipoPessoaSelect.value = 'PF';
+        e.target.value = value
+          .replace(/(\d{3})(\d)/, '$1.$2')
+          .replace(/(\d{3})(\d)/, '$1.$2')
+          .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+          .replace(/(-\d{2})\d+?$/, '$1');
+      }
+      cpfCnpjError.classList.add('hidden');
+      cpfCnpjInput.classList.remove('border-red-500');
+    });
+    cpfCnpjInput.addEventListener('blur', verificarValidadeCpfCnpj);
+
+    // 2. Email
+    const emailInput = document.getElementById('email');
+    const emailError = document.getElementById('email-error');
+    emailInput.addEventListener('input', function() {
+      const val = emailInput.value;
+      if (val.length > 0 && !val.includes('@')) {
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('border-red-500');
+      } else {
+        emailError.classList.add('hidden');
+        emailInput.classList.remove('border-red-500');
+      }
+    });
+
+    // 3. Telefone
+    const telefoneInput = document.getElementById('telefone');
+    telefoneInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 11) value = value.slice(0, 11);
+      if (value.length > 10) {
+        value = value.replace(/^(\d{2})(\d{1})(\d{4})(\d{4}).*/, '($1) $2 $3-$4');
+      } else if (value.length > 6) {
+        value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+      } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+      }
+      e.target.value = value;
+    });
+
+    // 4. Senha e Força
+    const senhaInput = document.getElementById('senha');
+    const indicador = document.getElementById('senha-indicador');
+    const senhaTexto = document.getElementById('senha-texto');
+    const senhaError = document.getElementById('senha-error');
+
+    senhaInput.addEventListener('input', function() {
+      const val = senhaInput.value;
+      let forca = 0;
+
+      if (val.length > 0 && val.length < 8) {
+        senhaError.classList.remove('hidden');
+        senhaInput.classList.add('border-red-500');
+      } else {
+        senhaError.classList.add('hidden');
+        senhaInput.classList.remove('border-red-500');
+      }
+
+      if (val.length >= 8) forca++;
+      if (/[A-Z]/.test(val) && /[0-9]/.test(val)) forca++;
+      if (/[^A-Za-z0-9]/.test(val)) forca++;
+
+      indicador.className = 'w-2.5 h-2.5 rounded-full transition-colors duration-300 bg-slate-700';
+      senhaTexto.innerText = '';
+
+      if (val.length === 0) return;
+      if (val.length < 8) {
+        indicador.classList.add('bg-red-900');
+        return; 
+      }
+      if (forca < 2) { 
+        indicador.classList.add('bg-green-500');
+        senhaTexto.innerText = 'Fraca';
+        senhaTexto.className = 'text-[10px] font-semibold text-green-500';
+      } else if (forca < 3) {
+        indicador.classList.add('bg-yellow-500');
+        senhaTexto.innerText = 'Média';
+        senhaTexto.className = 'text-[10px] font-semibold text-yellow-500';
+      } else {
+        indicador.classList.add('bg-red-600');
+        senhaTexto.innerText = 'Forte';
+        senhaTexto.className = 'text-[10px] font-semibold text-red-500';
+      }
+    });
+
+    // 5. CEP e Busca
+    const cepInput = document.getElementById('cep');
+    cepInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 8) value = value.slice(0, 8);
+      if (value.length > 5) {
+        value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+      }
+      e.target.value = value;
+    });
+
+    async function buscarCep() {
+      const logradouro = document.getElementById('logradouro');
+      const bairro = document.getElementById('bairro');
+      const cidade = document.getElementById('cidade');
+      const uf = document.getElementById('uf');
+      const numero = document.getElementById('numero');
+      
+      const cep = cepInput.value.replace(/\D/g, '');
+      if (cep.length !== 8) return;
+
+      try {
+        logradouro.placeholder = "Buscando...";
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+
+        if (data.erro) {
+          alert("CEP não encontrado.");
+          logradouro.placeholder = "";
+          return;
+        }
+
+        logradouro.value = data.logradouro;
+        bairro.value = data.bairro;
+        cidade.value = data.localidade;
+        uf.value = data.uf;
+        numero.focus();
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+      } finally {
+        if(!logradouro.value) logradouro.placeholder = "";
       }
     }
   </script>
