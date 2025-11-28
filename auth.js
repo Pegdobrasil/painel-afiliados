@@ -151,66 +151,6 @@ async function login() {
   }
 }
 
-// ===============================
-// ATIVAÇÃO DE ACESSO VIA LINK (TOKEN NA URL)
-// ===============================
-
-async function ativarAcessoSeTokenNaUrl() {
-  try {
-    const params = new URLSearchParams(window.location.search || "");
-    const token = params.get("token");
-
-    if (!token) {
-      return; // nada para fazer
-    }
-
-    const res = await fetch(`${API_BASE}/auth/access/activate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      console.warn("Falha ao ativar token de acesso:", data);
-      notify(
-        data?.detail ||
-          "Não foi possível validar seu link de acesso. Tente novamente."
-      );
-      return;
-    }
-
-    notify(
-      data?.message ||
-        "Seu acesso foi liberado. Agora você já pode fazer login com seu e-mail e senha."
-    );
-
-    // Remove o token da URL para evitar reaproveitar o link visible
-    if (window.history && window.history.replaceState) {
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  } catch (err) {
-    console.error(err);
-    notify("Erro ao validar link de acesso.");
-  }
-}
-
-// Só roda essa checagem na tela de login
-window.addEventListener("DOMContentLoaded", () => {
-  const path = window.location.pathname || "";
-
-  const isLoginPage =
-    path.endsWith("/") ||
-    path.endsWith("index.html") ||
-    !path.includes(".html"); // GitHub Pages raiz
-
-  if (isLoginPage) {
-    ativarAcessoSeTokenNaUrl();
-  }
-});
-
 // ==========================
 // RECUPERAR CONTA (tela login)
 // ==========================
