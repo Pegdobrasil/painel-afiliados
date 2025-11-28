@@ -5,17 +5,36 @@
   <title>Quem Somos – Peg do Brasil | Painel Afiliados</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Conheça a Peg do Brasil, distribuidora de acessórios para celular e eletrônicos, e entenda como funciona o nosso painel de afiliados para revendedores e criadores de conteúdo." />
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     body {
       font-family: 'Inter', sans-serif;
     }
+    
+    /* Scrollbar personalizada dark */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617; /* slate-950 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155; 
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569; 
+    }
+
     .fade-in-up {
-      animation: fadeInUp 0.6s ease-out forwards;
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(30px);
     }
     @keyframes fadeInUp {
       to {
@@ -23,258 +42,299 @@
         transform: translateY(0);
       }
     }
-    .animated-bg {
-      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-      background-size: 400% 400%;
-      animation: gradient 15s ease infinite;
+
+    /* Utilitário para texto gradiente */
+    .text-gradient {
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-image: linear-gradient(to right, #38bdf8, #818cf8);
     }
-    @keyframes gradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+
+    /* WHATSAPP FLUTUANTE */
+    .whatsapp-link {
+      position: fixed;
+      width: 60px;
+      height: 60px;
+      bottom: 40px;
+      right: 40px;
+      background-color: #25d366;
+      color: #FFF;
+      border-radius: 50px;
+      text-align: center;
+      font-size: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      animation: pulse-green 2s infinite;
+      transition: transform 0.3s ease;
+    }
+    .whatsapp-link:hover {
+      transform: scale(1.1);
+      background-color: #20ba5a;
+    }
+    .whatsapp-icon {
+      width: 35px;
+      height: 35px;
+      fill: white;
+    }
+    @keyframes pulse-green {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+    }
+    @media (max-width: 768px) {
+      .whatsapp-link { bottom: 20px; right: 20px; width: 50px; height: 50px; }
+      .whatsapp-icon { width: 28px; height: 28px; }
     }
   </style>
 </head>
 
-<body class="animated-bg flex items-center justify-center min-h-screen p-4">
+<body class="bg-gradient-to-br from-slate-950 via-sky-950 to-indigo-950 min-h-screen flex items-center justify-center p-4">
 
-  <!-- WRAPPER BRANCO -->
-  <div class="fade-in-up bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl w-full max-w-5xl border border-white/20 overflow-hidden flex flex-col">
+  <!-- WRAPPER PRINCIPAL -->
+  <div class="fade-in-up w-full max-w-6xl bg-slate-950/90 backdrop-blur-xl border border-slate-800/60 rounded-3xl shadow-2xl shadow-black/80 flex flex-col overflow-hidden relative h-[90vh] md:h-auto md:max-h-[90vh]">
 
     <!-- HEADER -->
-    <header class="border-b border-gray-200 bg-white/90">
-      <div class="px-6 md:px-8 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
+      <div class="px-6 md:px-8 py-5 flex items-center justify-between">
+        <div class="flex items-center gap-4">
           <!-- LOGO -->
-          <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-blue-500/30 overflow-hidden">
+          <div class="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700/50 flex items-center justify-center shadow-lg overflow-hidden shrink-0 group">
             <img
-              src="https://pegdobrasil.cdn.magazord.com.br/img/2025/11/produto/161412/logobonita-e-formosa.png?_gl=1*1ct7ydo*_ga*ODI4MjY3NDk4LjE3NTk0MDc0MDU.*_ga_4JXK3QVJ6X*czE3NjM4MjI0MjgkbzE1NiRnMSR0MTc2MzgyNDE2NiRqNDEkbDAkaDA."
+              src="https://pegdobrasil.cdn.magazord.com.br/img/2025/11/produto/161412/logobonita-e-formosa.png"
               alt="Peg do Brasil"
-              class="w-full h-full object-contain"
+              class="w-full h-full object-contain p-1.5 transition-transform duration-500 group-hover:scale-110"
             />
           </div>
           <div class="leading-tight">
-            <p class="text-sm font-semibold text-gray-800">Peg do Brasil</p>
-            <p class="text-[11px] text-gray-500">Distribuidora de Acessórios para Celular</p>
+            <p class="text-sm font-bold text-slate-100 tracking-wide">Peg do Brasil</p>
+            <p class="text-[10px] text-sky-400 font-medium tracking-widest uppercase">Distribuidora</p>
           </div>
         </div>
 
-        <nav class="hidden md:flex items-center gap-6 text-sm">
-          <a href="index.html" class="text-gray-600 hover:text-blue-600 transition">Login</a>
-          <a href="cadastro.html" class="text-gray-600 hover:text-blue-600 transition">Cadastro</a>
-          <a href="painel.html" class="text-gray-600 hover:text-blue-600 transition">Painel Afiliado</a>
+        <nav class="hidden md:flex items-center gap-8 text-sm font-medium">
+          <button id="openLoginModal" class="text-slate-400 hover:text-sky-400 transition flex items-center gap-2 group">
+            <i data-lucide="log-in" class="w-4 h-4 group-hover:stroke-sky-400 transition"></i>
+            Login
+          </button>
+          <a href="cadastro.html" class="text-slate-400 hover:text-sky-400 transition flex items-center gap-2 group">
+            <i data-lucide="user-plus" class="w-4 h-4 group-hover:stroke-sky-400 transition"></i>
+            Cadastro
+          </a>
+          <a href="painel.html" class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-200 hover:bg-slate-800 hover:text-white transition text-xs">
+            Painel Afiliado
+          </a>
         </nav>
       </div>
     </header>
 
-    <!-- CONTEÚDO -->
-    <main class="flex-1 bg-white overflow-y-auto">
+    <!-- CONTEÚDO PRINCIPAL (Scrollável) -->
+    <main class="flex-1 overflow-y-auto bg-slate-950/40 scroll-smooth">
 
-      <!-- SEÇÃO HERO (LIMPA) -->
-      <section class="px-6 md:px-8 py-10 border-b border-gray-100">
-        <div class="max-w-3xl mx-auto text-center">
-          <span class="inline-flex items-center text-[11px] uppercase tracking-[0.25em] text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 mb-4">
-            Painel de Afiliados • Peg do Brasil
-          </span>
+      <!-- HERO SECTION -->
+      <section class="relative px-6 md:px-10 py-16 border-b border-slate-800/60 overflow-hidden">
+        <!-- Background Glow -->
+        <div class="absolute top-0 right-0 w-96 h-96 bg-sky-600/10 blur-[100px] rounded-full pointer-events-none -z-10"></div>
 
-          <h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-gray-900">
-            Um ecossistema para <span class="text-blue-600">revendedores e afiliados</span>
-          </h1>
+        <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          <div class="space-y-6 relative z-10">
+            <span class="inline-flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-3 py-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+              Ecossistema para Revenda
+            </span>
 
-          <p class="text-sm md:text-base text-gray-700 mb-3">
-            Somos uma distribuidora com foco em quem vive de revenda: lojistas, assistências técnicas,
-            bancas, quiosques e criadores de conteúdo.
-          </p>
-          <p class="text-sm md:text-base text-gray-600">
-            Há mais de 20 anos no mercado de acessórios para celular e eletrônicos de pequeno porte, unimos
-            estoque estruturado, tecnologia e relacionamento próximo em um único projeto: o Painel de Afiliados
-            Peg do Brasil.
-          </p>
+            <h1 class="text-3xl md:text-5xl font-bold tracking-tight text-slate-50 leading-[1.1]">
+              Potencialize suas vendas com a <br class="hidden lg:block"/>
+              <span class="text-gradient">Peg do Brasil</span>
+            </h1>
 
-          <div class="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="cadastro.html"
-               class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]">
-              Quero ser afiliado
-            </a>
-            <a href="index.html"
-               class="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded-xl border border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 transition">
-              Já tenho acesso
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <!-- SEÇÃO 1: SOBRE A PEG DO BRASIL -->
-      <section class="px-6 md:px-8 py-10 border-b border-gray-100">
-        <div class="max-w-4xl mx-auto space-y-6">
-          <div class="space-y-2">
-            <p class="text-[11px] font-semibold tracking-[0.25em] uppercase text-gray-500">
-              Quem somos
+            <p class="text-sm md:text-base text-slate-400 leading-relaxed font-light border-l-2 border-slate-800 pl-4">
+              Há mais de 20 anos unindo tecnologia e estoque estruturado. Um projeto focado em 
+              <strong class="text-slate-200 font-medium">lojistas, assistências e criadores de conteúdo</strong> 
+              que vivem de revenda.
             </p>
-            <h2 class="text-2xl font-bold text-gray-900">
-              Peg do Brasil como distribuidora
-            </h2>
-            <p class="text-sm text-gray-600 max-w-2xl">
-              Distribuidora especializada em acessórios para celular e eletrônicos de pequeno porte, com operação
-              voltada para revenda em quantidade.
-            </p>
-          </div>
 
-          <div class="grid md:grid-cols-2 gap-8 text-sm text-gray-700">
-            <div class="space-y-3">
-              <p>
-                Atendemos lojas físicas, bancas, quiosques, assistências técnicas e revendedores que precisam
-                de um fornecedor consistente, com portfólio amplo e regularidade na reposição.
-              </p>
-              <p>
-                Nosso catálogo reúne capas, películas, cabos, carregadores, ferramentas, fones e diversos
-                eletrônicos de pequeno porte, sempre com foco em produtos que giram no dia a dia.
-              </p>
-            </div>
-            <div class="space-y-3">
-              <p>
-                Ao longo de mais de duas décadas, estruturamos processos de compra, estoque, separação e
-                expedição pensados para quem não pode ficar sem mercadoria na prateleira.
-              </p>
-              <p>
-                A operação em Curitiba – PR é o centro dessa estrutura, atendendo tanto a região quanto todo
-                o Brasil por canais digitais.
-              </p>
+            <div class="pt-2 flex flex-wrap gap-4">
+              <a href="cadastro.html"
+                 class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transform hover:-translate-y-1 transition-all duration-200">
+                Quero ser afiliado
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </a>
             </div>
           </div>
-        </div>
-      </section>
 
-      <!-- SEÇÃO 2: PROJETO DE AFILIADOS -->
-      <section class="px-6 md:px-8 py-10 border-b border-gray-100">
-        <div class="max-w-4xl mx-auto space-y-6">
-          <div class="space-y-2">
-            <p class="text-[11px] font-semibold tracking-[0.25em] uppercase text-gray-500">
-              Projeto de afiliados
-            </p>
-            <h2 class="text-2xl font-bold text-gray-900">
-              Como funciona o Painel de Afiliados
-            </h2>
-            <p class="text-sm text-gray-600 max-w-2xl">
-              O painel foi criado para transformar o catálogo da Peg do Brasil em vendas recorrentes nos canais
-              dos parceiros, com organização e visão de performance.
-            </p>
-          </div>
+          <!-- Card Ilustrativo -->
+          <div class="relative">
+            <div class="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-6 md:p-8 relative hover:border-sky-500/20 transition duration-500">
+              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Nossos Pilares</h3>
+              
+              <div class="space-y-6">
+                <!-- Item 1 -->
+                <div class="flex gap-4">
+                  <div class="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
+                    <i data-lucide="box" class="w-5 h-5 text-sky-400"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-slate-200 font-semibold text-sm">Distribuição em Escala</h4>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                      Estoque profundo voltado para giro e constância de linha na sua prateleira.
+                    </p>
+                  </div>
+                </div>
 
-          <div class="grid md:grid-cols-2 gap-8">
-            <!-- Lista de pontos -->
-            <div class="space-y-3 text-sm text-gray-700">
-              <p>
-                A proposta é simples: concentrar cadastros, integrações e informações de desempenho em um único
-                ambiente, pensado para revendedores e criadores de conteúdo.
-              </p>
-              <ul class="space-y-2">
-                <li class="flex gap-2">
-                  <span class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  <span>Cadastro de afiliados com dados completos de pessoa física ou jurídica.</span>
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  <span>Estrutura preparada para integrações com marketplaces, hubs e lojas virtuais.</span>
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  <span>Painel em evolução constante, com melhorias de usabilidade e relatórios.</span>
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  <span>Foco total em revenda por quantidade, respeitando o espaço do parceiro no varejo final.</span>
-                </li>
-              </ul>
-            </div>
+                <!-- Item 2 -->
+                <div class="flex gap-4">
+                  <div class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                    <i data-lucide="monitor-smartphone" class="w-5 h-5 text-indigo-400"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-slate-200 font-semibold text-sm">Tecnologia Integrada</h4>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                      Painel exclusivo para gerenciar pedidos e performance pensado no revendedor.
+                    </p>
+                  </div>
+                </div>
 
-            <!-- Card de fluxo prático -->
-            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm text-sm text-gray-700">
-              <h3 class="text-sm font-semibold text-gray-900 mb-3">
-                Na prática, o afiliado:
-              </h3>
-              <ol class="list-decimal list-inside space-y-2 mb-4">
-                <li>Realiza o cadastro no Painel de Afiliados com dados completos e senha segura.</li>
-                <li>Configura integrações e canais de venda dentro do painel.</li>
-                <li>Conecta o catálogo da Peg do Brasil aos próprios anúncios e estruturas de loja.</li>
-                <li>Acompanha pedidos e desempenho diretamente na plataforma.</li>
-              </ol>
-              <p class="text-xs text-gray-600">
-                A ideia é simples: o afiliado foca em vender e atender o público, enquanto a Peg do Brasil cuida
-                de estoque, reposição e suporte operacional.
-              </p>
+                <!-- Item 3 -->
+                <div class="flex gap-4">
+                  <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                    <i data-lucide="handshake" class="w-5 h-5 text-emerald-400"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-slate-200 font-semibold text-sm">Parceria Real</h4>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                      Atendimento que entende de volume e não compete com o seu varejo.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SEÇÃO 3: POTENCIAL COMO FORNECEDOR -->
-      <section class="px-6 md:px-8 py-10">
-        <div class="max-w-4xl mx-auto space-y-6">
-          <div class="space-y-2">
-            <p class="text-[11px] font-semibold tracking-[0.25em] uppercase text-gray-500">
-              Parceiro de negócios
+      <!-- SEÇÃO 1: SOBRE E PRODUTOS (Grid clean) -->
+      <section class="px-6 md:px-10 py-16 bg-slate-900/20 border-b border-slate-800/60">
+        <div class="max-w-5xl mx-auto space-y-10">
+          <div class="text-center max-w-2xl mx-auto">
+             <h2 class="text-2xl font-bold text-slate-100">Mais que produtos, <span class="text-sky-400">Soluções de Venda</span></h2>
+             <p class="text-sm text-slate-400 mt-2">Um catálogo pensado para o dia a dia de quem vende tecnologia.</p>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-6">
+             <!-- Card Produto 1 -->
+             <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
+                <i data-lucide="smartphone" class="w-8 h-8 text-slate-500 group-hover:text-sky-400 transition mb-4"></i>
+                <h3 class="text-slate-200 font-semibold mb-2">Acessórios Móveis</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">Capas, películas e cabos de alta rotatividade para bancas e lojas.</p>
+             </div>
+             <!-- Card Produto 2 -->
+             <div class="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
+                <i data-lucide="zap" class="w-8 h-8 text-slate-500 group-hover:text-yellow-400 transition mb-4"></i>
+                <h3 class="text-slate-200 font-semibold mb-2">Energia e Carga</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">Carregadores homologados e fontes potentes que garantem qualidade.</p>
+             </div>
+             <!-- Card Produto 3 -->
+             <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl hover:border-slate-600 transition group">
+                <i data-lucide="headphones" class="w-8 h-8 text-slate-500 group-hover:text-indigo-400 transition mb-4"></i>
+                <h3 class="text-slate-200 font-semibold mb-2">Áudio e Eletrônicos</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">Fones, caixas de som e gadgets de pequeno porte com alta margem.</p>
+             </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 text-sm text-slate-400 leading-relaxed border-t border-slate-800/50 pt-8">
+            <p>
+              Atendemos lojas físicas, quiosques e assistências que precisam de um fornecedor confiável.
+              Ao longo de duas décadas, estruturamos processos de compra e expedição para que você nunca fique sem mercadoria.
             </p>
-            <h2 class="text-2xl font-bold text-gray-900">
-              Nosso potencial como fornecedor
-            </h2>
-            <p class="text-sm text-gray-600 max-w-2xl">
-              Estrutura pensada para quem precisa de escala, constância e segurança na reposição de itens.
+            <p>
+              Nossa operação em <strong>Curitiba – PR</strong> é o centro logístico, atendendo tanto a região local quanto despachando para todo o Brasil com agilidade e rastreabilidade.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2: COMO FUNCIONA (Passo a passo visual) -->
+      <section class="px-6 md:px-10 py-16 border-b border-slate-800/60">
+        <div class="max-w-5xl mx-auto">
+          <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-10">
+            <div>
+              <p class="text-[10px] font-bold tracking-widest uppercase text-slate-500 mb-2">Painel de Afiliados</p>
+              <h2 class="text-2xl md:text-3xl font-bold text-slate-100">Como funciona na prática?</h2>
+            </div>
+            <p class="text-sm text-slate-400 max-w-md text-right md:text-left">
+              Foque em vender. A Peg cuida do estoque, separação e envio.
             </p>
           </div>
 
-          <div class="grid md:grid-cols-2 gap-8 text-sm text-gray-700">
-            <div class="space-y-3">
-              <h3 class="font-semibold text-gray-900">Catálogo para girar todos os dias</h3>
-              <p>
-                Seleção de produtos focada em giro: itens que saem na bancada, no balcão e nas vitrines
-                com frequência, ajudando o parceiro a manter o fluxo de caixa ativo.
-              </p>
-
-              <h3 class="font-semibold text-gray-900 mt-4">Atendimento para revenda</h3>
-              <p>
-                Atendimento preparado para entender volume, reposição, condições comerciais e realidade de
-                quem vende tecnologia na ponta.
-              </p>
+          <!-- Grid de Passos -->
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Passo 1 -->
+            <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
+              <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">1</span>
+              <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center mb-4 shadow-lg shadow-sky-500/20">
+                <i data-lucide="user-check" class="w-4 h-4 text-white"></i>
+              </div>
+              <h4 class="font-semibold text-slate-200 mb-1">Cadastro</h4>
+              <p class="text-xs text-slate-400">Crie sua conta com dados completos (PF ou PJ).</p>
             </div>
 
-            <div class="space-y-3">
-              <h3 class="font-semibold text-gray-900">Operação estruturada</h3>
-              <p>
-                Processos de separação, conferência e envio desenhados para reduzir erros e manter
-                previsibilidade de entrega para o parceiro.
-              </p>
+            <!-- Passo 2 -->
+            <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
+              <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">2</span>
+              <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
+                <i data-lucide="settings" class="w-4 h-4 text-slate-300"></i>
+              </div>
+              <h4 class="font-semibold text-slate-200 mb-1">Configuração</h4>
+              <p class="text-xs text-slate-400">Integre seus canais de venda ou marketplaces.</p>
+            </div>
 
-              <h3 class="font-semibold text-gray-900 mt-4">Visão de parceria, não de concorrência</h3>
-              <p>
-                A Peg do Brasil trabalha para abastecer quem revende. O objetivo é fortalecer o parceiro em
-                marketplaces, lojas virtuais e canais físicos, e não disputar espaço com ele.
-              </p>
+            <!-- Passo 3 -->
+            <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
+              <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">3</span>
+              <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
+                <i data-lucide="link" class="w-4 h-4 text-slate-300"></i>
+              </div>
+              <h4 class="font-semibold text-slate-200 mb-1">Conexão</h4>
+              <p class="text-xs text-slate-400">Use nosso catálogo nos seus anúncios.</p>
+            </div>
+
+            <!-- Passo 4 -->
+            <div class="bg-slate-900/40 p-5 rounded-2xl border border-slate-800 relative group hover:bg-slate-900/80 transition">
+              <span class="absolute top-4 right-4 text-4xl font-black text-slate-800 group-hover:text-slate-700 transition select-none">4</span>
+              <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center mb-4">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-300"></i>
+              </div>
+              <h4 class="font-semibold text-slate-200 mb-1">Lucro</h4>
+              <p class="text-xs text-slate-400">Acompanhe pedidos e vendas no painel.</p>
             </div>
           </div>
         </div>
       </section>
 
       <!-- CTA FINAL -->
-      <section class="px-6 md:px-8 py-8 bg-gray-50 border-t border-gray-200">
-        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <section class="px-6 md:px-10 py-12 bg-slate-950 border-t border-slate-900">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 bg-slate-900/50 p-8 rounded-3xl border border-slate-800">
           <div class="text-center md:text-left">
-            <h2 class="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-              Pronto para crescer junto com a Peg do Brasil?
+            <h2 class="text-lg font-bold text-slate-100 mb-1">
+              Pronto para crescer com a Peg?
             </h2>
-            <p class="text-sm text-gray-700 max-w-xl">
-              Se você é lojista, revendedor, assistência técnica ou criador de conteúdo,
-              o Painel de Afiliados é o próximo passo para organizar e escalar suas vendas.
+            <p class="text-sm text-slate-400">
+              O próximo passo para organizar e escalar suas vendas.
             </p>
           </div>
-          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <div class="flex flex-col sm:flex-row gap-3 shrink-0">
             <a href="cadastro.html"
-               class="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]">
+               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-lg shadow-sky-500/20 transition">
               Criar meu acesso
             </a>
             <a href="index.html"
-               class="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium rounded-xl border border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 transition">
-              Já tenho cadastro
+               class="inline-flex items-center justify-center px-6 py-2.5 text-xs font-bold uppercase tracking-wide rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition">
+              Fazer Login
             </a>
           </div>
         </div>
@@ -282,17 +342,121 @@
     </main>
 
     <!-- RODAPÉ -->
-    <footer class="bg-white border-t border-gray-200">
-      <div class="px-6 md:px-8 py-4 text-[11px] md:text-xs text-gray-500 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+    <footer class="bg-slate-950 border-t border-slate-900 shrink-0">
+      <div class="max-w-6xl mx-auto px-6 py-5 text-[10px] md:text-xs text-slate-600 flex flex-col md:flex-row gap-2 md:items-center md:justify-between text-center md:text-left">
         <p>
-          Peg do Brasil – Distribuidora de Acessórios para Celular e Eletrônicos.
+          © 2025 Peg do Brasil – Distribuidora de Acessórios.
         </p>
-        <p>
-          Atendimento: segunda a sexta das 9:00 às 18:00 • sábado das 9:00 às 13:00 • Boqueirão – Curitiba – PR.
+        <p class="flex items-center justify-center gap-1.5">
+          <i data-lucide="clock" class="w-3 h-3"></i>
+          Seg-Sex 9h-18h • Sáb 9h-13h • Curitiba – PR
         </p>
       </div>
     </footer>
 
+    <!-- MODAL LOGIN (Código preservado para funcionalidade) -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-start pt-10 md:pt-16 overflow-y-auto z-50 transition-opacity duration-300">
+      <div class="fade-in-up w-full max-w-md bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden relative p-8 mx-4">
+        
+        <button id="closeLoginModal" type="button" class="absolute top-4 right-4 text-slate-500 hover:text-slate-200 p-1 hover:bg-slate-900 rounded-lg transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="text-center mb-8">
+          <div class="flex justify-center mb-4">
+            <img src="https://pegdobrasil.cdn.magazord.com.br/img/2025/11/produto/161412/logobonita-e-formosa.png" alt="Peg do Brasil" class="h-14 w-auto mx-auto opacity-90">
+          </div>
+          <h1 class="text-xl font-bold text-slate-50">Bem-vindo de volta</h1>
+          <p class="text-slate-400 text-xs mt-1">Acesse o Painel de Afiliados</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Email</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <input id="email" type="email" placeholder="seu@email.com" class="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5 ml-1">Senha</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <input id="senha" type="password" placeholder="••••••••" class="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-700 rounded-lg text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-900/50">
+              <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer">
+                <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" onclick="login()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-medium py-3 rounded-lg shadow-lg shadow-sky-900/20 transition-all text-sm mt-2">
+            Entrar
+          </button>
+        </div>
+
+        <div class="mt-6 text-center">
+          <p class="text-xs text-slate-500">
+            Ainda não tem acesso? <a href="cadastro.html" class="text-sky-400 hover:text-sky-300 font-medium transition-colors">Cadastre-se</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- WHATSAPP -->
+  <a href="http://wa.me/5541988849099" target="_blank" class="whatsapp-link" aria-label="Atendimento via WhatsApp">
+    <svg class="whatsapp-icon" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg">
+      <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+    </svg>
+  </a>
+
+  <!-- Scripts -->
+  <script src="auth.js"></script>
+  <script>
+    const openLoginModalBtn = document.getElementById('openLoginModal');
+    const loginModal = document.getElementById('loginModal');
+    const closeLoginModalBtn = document.getElementById('closeLoginModal');
+
+    if (openLoginModalBtn && loginModal && closeLoginModalBtn) {
+      openLoginModalBtn.addEventListener('click', () => {
+        loginModal.classList.remove('hidden');
+        loginModal.classList.add('flex');
+        if (window.lucide) lucide.createIcons();
+      });
+
+      closeLoginModalBtn.addEventListener('click', () => {
+        loginModal.classList.add('hidden');
+        loginModal.classList.remove('flex');
+      });
+
+      loginModal.addEventListener('click', (event) => {
+        if (event.target === loginModal) {
+          loginModal.classList.add('hidden');
+          loginModal.classList.remove('flex');
+        }
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+
+    function togglePassword() {
+      const senhaInput = document.getElementById('senha');
+      const eyeIcon = document.getElementById('eye-icon');
+      if (!senhaInput) return;
+      if (senhaInput.type === 'password') {
+        senhaInput.type = 'text';
+        if (eyeIcon) { eyeIcon.style.opacity = '1'; eyeIcon.style.color = '#38bdf8'; }
+      } else {
+        senhaInput.type = 'password';
+        if (eyeIcon) { eyeIcon.style.opacity = ''; eyeIcon.style.color = ''; }
+      }
+    }
+  </script>
 </body>
 </html>
