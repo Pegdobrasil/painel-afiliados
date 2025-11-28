@@ -17,10 +17,70 @@ from .email_config import send_email
 import rein_client
 
 # Garante que a tabela exista
+# Garante que a tabela exista
 Base.metadata.create_all(bind=engine)
 
-router = APIRouter()
 
+def run_schema_migrations():
+    """
+    Migração automática simples:
+    - Garante que a tabela 'usuarios' tenha as colunas extras usadas no código.
+    - Usa 'IF NOT EXISTS' para não quebrar se a coluna já existir.
+    """
+    from sqlalchemy import text  # import local pra não mexer no topo
+
+    with engine.begin() as conn:
+        # status manual do usuário (usado em login)
+        conn.execute(
+            text(
+                """
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS ativo boolean DEFAULT true
+                """
+            )
+        )
+
+        # campos usados em recuperação de senha
+        conn.execute(
+            text(
+                """
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS reset_token varchar(255)
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS reset_token_expires_at timestamp with time zone
+                """
+            )
+        )
+
+        # timestamps básicos
+        conn.execute(
+            text(
+                """
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now()
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now()
+                """
+            )
+        )
+
+
+# Roda a migração na inicialização da API
+run_schema_migrations()
+
+router = APIRouter()
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
