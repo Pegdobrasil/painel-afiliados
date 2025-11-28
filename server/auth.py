@@ -226,7 +226,45 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
     if not verificar_senha(data.senha, usuario.senha_hash):
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
 
-    # Por enquanto ignoramos first_login_must_change para não travar
+    # ========================================
+    # Sincroniza / valida vínculo com pessoa na Rein
+    # ========================================
+    try:
+        documento = usuario.cpf_cnpj  # está salvo só com dígitos no banco
+        pessoa_id = rein_client.buscar_pessoa_por_documento(documento)
+
+        if pessoa_id:
+            # Já existe na Rein → garante que o vínculo está correto
+            if usuario.rein_pessoa_id != int(pessoa_id):
+                usuario.rein_pessoa_id = int(pessoa_id)
+                db.commit()
+                db.refresh(usuario)
+        else:
+            # Não existe na Rein -> cria agora usando os dados do usuário do painel
+            novo_id = rein_client.criar_cliente_rein(
+                {
+                    "cpf_cnpj": documento,
+                    "tipo_pessoa": usuario.tipo_pessoa,
+                    "nome": usuario.nome,
+                    "email": usuario.email,
+                    "telefone": usuario.telefone,
+                    "cep": usuario.cep,
+                    "endereco": usuario.endereco,
+                    "numero": usuario.numero,
+                    "bairro": usuario.bairro,
+                    "cidade": usuario.cidade,
+                    "estado": usuario.estado,
+                }
+            )
+            usuario.rein_pessoa_id = int(novo_id)
+            db.commit()
+            db.refresh(usuario)
+    except Exception as e:
+        # Nunca derruba o login por causa de problema de integração
+        print(
+            f"[WARN] Falha ao sincronizar usuário {usuario.email} com Rein no login: {e}"
+        )
+
     token = secrets.token_hex(32)
 
     return {
@@ -235,7 +273,9 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
+        "rein_pessoa_id": usuario.rein_pessoa_id,
     }
+
 
 
 # =====================================================
