@@ -52,12 +52,95 @@ def criar_reset_para_usuario(usuario: Usuario, minutos: int = 60) -> None:
 
 
 # =====================================================
+# Helpers de token de acesso (ativação do painel)
+# =====================================================
+
+def gerar_token_acesso() -> str:
+    # token longo, seguro, próprio para link de e-mail
+    return secrets.token_urlsafe(32)
+
+
+def criar_token_acesso(
+    db: Session,
+    usuario: Usuario,
+    minutos: int = 60 * 24 * 7,  # 7 dias; se quiser sem expiração, passe minutos=None
+) -> AccessToken:
+    expires_at: Optional[datetime] = None
+    if minutos:
+        expires_at = datetime.utcnow() + timedelta(minutes=minutos)
+
+    token = AccessToken(
+        usuario_id=usuario.id,
+        token=gerar_token_acesso(),
+        is_active=False,  # só vira True quando clicar no link
+        expires_at=expires_at,
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    return token
+
+
+def usuario_tem_tokens(db: Session, usuario_id: int) -> bool:
+    return (
+        db.query(AccessToken.id)
+        .filter(AccessToken.usuario_id == usuario_id)
+        .first()
+        is not None
+    )
+
+
+def obter_token_acesso_ativo(
+    db: Session, usuario_id: int
+) -> Optional[AccessToken]:
+    """Retorna um token ativo e não expirado para o usuário, se houver."""
+    agora = datetime.utcnow()
+    return (
+        db.query(AccessToken)
+        .filter(
+            AccessToken.usuario_id == usuario_id,
+            AccessToken.is_active.is_(True),
+            (
+                (AccessToken.expires_at.is_(None))
+                | (AccessToken.expires_at >= agora)
+            ),
+        )
+        .order_by(AccessToken.id.desc())
+        .first()
+    )
+
+# =====================================================
 # Helpers de e-mail
 # =====================================================
 
 FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/trocar_senha.html"
+FRONT_ACCESS_URL = "https://pegdobrasil.github.io/painel-afiliados/index.html"
 
+def enviar_email_link_acesso(usuario: Usuario, token: str) -> None:
+    link = f"{FRONT_ACCESS_URL}?token={token}"
 
+    html = f"""
+    <p>Olá, {usuario.nome}!</p>
+    <p>Seu cadastro foi realizado no
+    <strong>Painel de Afiliados PEG do Brasil</strong>.</p>
+    <p>Para liberar seu acesso ao painel, clique no link abaixo:</p>
+
+    <p><a href="{link}">{link}</a></p>
+
+    <p>Depois de ativar o acesso pelo link, você poderá entrar usando
+    o seu e-mail e a senha cadastrada.</p>
+    """
+
+    try:
+        send_email(
+            to_email=usuario.email,
+            subject="Ativar acesso – Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao enviar e-mail com link de acesso: {e}")
+
+        
 def enviar_email_link_reset(usuario: Usuario) -> None:
     if not getattr(usuario, "reset_token", None):
         criar_reset_para_usuario(usuario)
@@ -119,6 +202,49 @@ def enviar_email_senha_alterada(usuario: Usuario) -> None:
     except Exception as e:
         print(f"[WARN] Falha ao enviar e-mail de confirmação de senha: {e}")
 
+class AccessActivatePayload(BaseModel):
+    token: str
+
+
+@router.post("/access/activate")
+def activate_access_link(
+    payload: AccessActivatePayload, db: Session = Depends(get_db)
+):
+    token_str = (payload.token or "").strip()
+    if not token_str:
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    token_obj: Optional[AccessToken] = (
+        db.query(AccessToken).filter(AccessToken.token == token_str).first()
+    )
+
+    if not token_obj:
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    agora = datetime.utcnow()
+    if token_obj.expires_at and token_obj.expires_at < agora:
+        raise HTTPException(status_code=400, detail="Token expirado.")
+
+    if not token_obj.is_active:
+        token_obj.is_active = True
+        db.commit()
+        db.refresh(token_obj)
+
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.id == token_obj.usuario_id)
+        .first()
+    )
+
+    if not usuario:
+        raise HTTPException(
+            status_code=400, detail="Usuário não encontrado para este token."
+        )
+
+    return {
+        "status": "ok",
+        "message": "Seu acesso foi liberado. Agora você já pode fazer login no painel.",
+    }
 
 # =====================================================
 # ROTA: CADASTRO
@@ -197,20 +323,26 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     if hasattr(usuario, "ativo"):
         usuario.ativo = True
 
-    db.add(usuario)
+        db.add(usuario)
     db.commit()
     db.refresh(usuario)
 
-    # Tenta enviar e-mail de boas-vindas, sem derrubar a rota
-    enviar_email_boas_vindas(usuario)
+    # Gera token de acesso e envia link por e-mail
+    try:
+        token_acesso = criar_token_acesso(db, usuario)
+        enviar_email_link_acesso(usuario, token_acesso.token)
+    except Exception as e:
+        # Não derruba o cadastro se der erro ao enviar e-mail
+        print(f"[WARN] Falha ao criar token de acesso/enviar e-mail: {e}")
 
     return {
         "status": "success",
-        "message": "Cadastro realizado com sucesso!",
+        "message": "Cadastro realizado com sucesso! Verifique seu e-mail para ativar o acesso.",
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
     }
+
 
 
 # =====================================================
@@ -224,12 +356,30 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
 
-    # Se tiver campo 'ativo' e estiver falso, bloqueia
+    # Se tiver flag 'ativo' e estiver falso, bloqueia sempre
     if getattr(usuario, "ativo", True) is False:
         raise HTTPException(status_code=403, detail="Usuário inativo.")
 
     if not verificar_senha(data.senha, usuario.senha_hash):
         raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
+
+    # =====================================================
+    # Checagem de token de acesso (ativação por e-mail)
+    # =====================================================
+    # Regra:
+    # - Se o usuário NÃO tiver nenhum token cadastrado → não bloqueia (cadastros antigos).
+    # - Se tiver token cadastrado e NENHUM ativo → bloqueia.
+    tem_token = usuario_tem_tokens(db, usuario.id)
+    if tem_token:
+        token_ativo = obter_token_acesso_ativo(db, usuario.id)
+        if not token_ativo:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Seu acesso ainda não foi liberado. "
+                    "Use o link enviado por e-mail para ativar o painel."
+                ),
+            )
 
     # ========================================
     # Sincroniza / valida vínculo com pessoa na Rein
@@ -270,6 +420,7 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
             f"[WARN] Falha ao sincronizar usuário {usuario.email} com Rein no login: {e}"
         )
 
+    # token de sessão simples (se quiser usar futuramente no backend)
     token = secrets.token_hex(32)
 
     return {
