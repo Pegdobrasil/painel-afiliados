@@ -76,8 +76,8 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <!-- CPF/CNPJ (Automático) -->
-          <div>
+          <!-- CPF/CNPJ (Automático e Validado) -->
+          <div class="relative">
             <label class="block text-sm font-medium text-slate-200 mb-1.5 ml-1">CPF / CNPJ</label>
             <input 
               id="cpf_cnpj" 
@@ -86,6 +86,10 @@
               maxlength="18"
               class="w-full px-4 py-3 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 input-dark"
             >
+            <!-- Mensagem de erro de CPF/CNPJ -->
+            <span id="cpf-cnpj-error" class="hidden absolute -bottom-5 left-1 text-[10px] text-red-400 font-medium">
+              Documento inválido. Verifique os números digitados.
+            </span>
           </div>
 
           <!-- Nome Completo -->
@@ -280,17 +284,118 @@
   <script>
     lucide.createIcons();
 
-    // --- 1. Lógica CPF/CNPJ Automático ---
+    // --- 1. Lógica CPF/CNPJ Automático e VALIDAÇÃO ---
     const cpfCnpjInput = document.getElementById('cpf_cnpj');
     const tipoPessoaSelect = document.getElementById('tipo_pessoa');
+    const cpfCnpjError = document.getElementById('cpf-cnpj-error');
 
-    cpfCnpjInput.addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+    // Funções de validação matemática
+    function validarCPF(cpf) {
+      cpf = cpf.replace(/[^\d]+/g, '');
+      if (cpf == '') return false;
+      // Elimina CPFs invalidos conhecidos
+      if (cpf.length != 11 || 
+          cpf == "00000000000" || 
+          cpf == "11111111111" || 
+          cpf == "22222222222" || 
+          cpf == "33333333333" || 
+          cpf == "44444444444" || 
+          cpf == "55555555555" || 
+          cpf == "66666666666" || 
+          cpf == "77777777777" || 
+          cpf == "88888888888" || 
+          cpf == "99999999999")
+          return false;
       
-      // Define tipo pessoa baseado no tamanho cru
+      // Valida 1o digito
+      let add = 0;
+      for (let i = 0; i < 9; i++) add += parseInt(cpf.charAt(i)) * (10 - i);
+      let rev = 11 - (add % 11);
+      if (rev == 10 || rev == 11) rev = 0;
+      if (rev != parseInt(cpf.charAt(9))) return false;
+      
+      // Valida 2o digito
+      add = 0;
+      for (let i = 0; i < 10; i++) add += parseInt(cpf.charAt(i)) * (11 - i);
+      rev = 11 - (add % 11);
+      if (rev == 10 || rev == 11) rev = 0;
+      if (rev != parseInt(cpf.charAt(10))) return false;
+      
+      return true;
+    }
+
+    function validarCNPJ(cnpj) {
+      cnpj = cnpj.replace(/[^\d]+/g, '');
+      if (cnpj == '') return false;
+      if (cnpj.length != 14) return false;
+      
+      // Elimina CNPJs invalidos conhecidos (todos iguais)
+      if (/^(\d)\1+$/.test(cnpj)) return false;
+
+      // Valida DVs
+      let tamanho = cnpj.length - 2
+      let numeros = cnpj.substring(0,tamanho);
+      let digitos = cnpj.substring(tamanho);
+      let soma = 0;
+      let pos = tamanho - 7;
+      
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(0)) return false;
+
+      tamanho = tamanho + 1;
+      numeros = cnpj.substring(0,tamanho);
+      soma = 0;
+      pos = tamanho - 7;
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(1)) return false;
+
+      return true;
+    }
+
+    // Função para verificar se está válido e atualizar UI
+    function verificarValidadeCpfCnpj() {
+        const val = cpfCnpjInput.value.replace(/\D/g, '');
+        let isValid = false;
+
+        if (val.length === 11) {
+            isValid = validarCPF(val);
+        } else if (val.length === 14) {
+            isValid = validarCNPJ(val);
+        } else if (val.length === 0) {
+            // Se estiver vazio, limpamos o erro (não mostra erro ainda)
+            isValid = true; 
+        } else {
+            // Tamanho incorreto (nem 11 nem 14)
+            isValid = false;
+        }
+
+        if (!isValid && val.length > 0) {
+            cpfCnpjError.classList.remove('hidden');
+            cpfCnpjInput.classList.add('border-red-500', 'focus:ring-red-500/40');
+            cpfCnpjInput.classList.remove('focus:ring-sky-500/40');
+        } else {
+            cpfCnpjError.classList.add('hidden');
+            cpfCnpjInput.classList.remove('border-red-500', 'focus:ring-red-500/40');
+            cpfCnpjInput.classList.add('focus:ring-sky-500/40');
+        }
+    }
+
+    // Máscara e Lógica de Input
+    cpfCnpjInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); 
+      
+      // Define tipo pessoa e aplica máscara
       if (value.length > 11) {
         tipoPessoaSelect.value = 'PJ';
-        // Máscara CNPJ: 00.000.000/0001-00
+        // Máscara CNPJ
         e.target.value = value
           .replace(/^(\d{2})(\d)/, '$1.$2')
           .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
@@ -299,14 +404,21 @@
           .slice(0, 18);
       } else {
         tipoPessoaSelect.value = 'PF';
-        // Máscara CPF: 000.000.000-00
+        // Máscara CPF
         e.target.value = value
           .replace(/(\d{3})(\d)/, '$1.$2')
           .replace(/(\d{3})(\d)/, '$1.$2')
           .replace(/(\d{3})(\d{1,2})/, '$1-$2')
           .replace(/(-\d{2})\d+?$/, '$1');
       }
+      
+      // Oculta erro enquanto digita para não incomodar
+      cpfCnpjError.classList.add('hidden');
+      cpfCnpjInput.classList.remove('border-red-500');
     });
+
+    // Valida apenas ao sair do campo (blur)
+    cpfCnpjInput.addEventListener('blur', verificarValidadeCpfCnpj);
 
     // --- 2. Validação de Email ---
     const emailInput = document.getElementById('email');
