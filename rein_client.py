@@ -221,34 +221,30 @@ def buscar_pessoa_por_documento(documento: str):
 
 
 
-def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
-    """
-    Cria um cliente na REIN usando o endpoint PUT /api/v1/pessoa,
-    seguindo o modelo do Postman.
+def criar_cliente_rein(usuario_data: dict) -> int:
+    endpoint = "/api/v1/pessoa"
+    headers = rein_headers(endpoint)
+    url = REIN_BASE + endpoint
 
-    IMPORTANTE:
-    - A REIN guarda CPF e CNPJ SEMPRE em Cnpj (mesmo PF).
-    """
-    doc = _format_documento(usuario_data.get("cpf_cnpj", ""))
-    digits = _re.sub(r"\D", "", doc or "")
-
-    # Usamos TipoPessoa só para classificação interna
+    # Documento vindo do cadastro do afiliado
+    raw_doc = usuario_data["cpf_cnpj"]
+    doc = aplicar_mascara_documento(raw_doc)
+    digits = re.sub(r"\D", "", doc)
     tipo = "F" if len(digits) == 11 else "J"
 
-    payload: Dict[str, Any] = {
-        "CanalVendaId": 4,           # canal de venda de afiliados que você comentou
+    payload = {
+        # cabeçalho da pessoa (segue o modelo funcional / Postman)
+        "CanalVendaId": 1001,          # você comentou que o canal de venda, por enquanto, é 4
         "UsuarioTecnicoId": 1,
-        "UsuarioVendedorId": 1,
+        "UsuarioVendedorId": 457,   # mesmo vendedor que aparece nos cadastros gerados pela Magazord
         "EnviarEcf": True,
         "CreditoDevolucao": 0,
         "LimiteDeCredito": 0,
         "Crt": 0,
         "IndicadorInscricaoEstadual": 0,
         "Cnae": "",
-        # <<< aqui está a correção principal:
-        # sempre mandar o documento (CPF OU CNPJ) no campo Cnpj
+        # A Rein usa SEMPRE o campo Cnpj, mesmo para pessoa física
         "Cnpj": doc,
-        # não enviamos campo Cpf, a API não usa
         "DataCadastro": "",
         "DataFundacao": "",
         "DataUltimaModificacao": "",
@@ -256,81 +252,101 @@ def criar_cliente_rein(usuario_data: Dict[str, Any]) -> int:
         "InscricaoMunicipal": "",
         "Suframa": "",
         "InscricaoEstadual": "",
-        "Nome": usuario_data.get("nome"),
-        "RazaoSocial": usuario_data.get("nome"),
-        "Observacao": "",
+        "Nome": usuario_data["nome"],
+        "RazaoSocial": usuario_data["nome"],
+        "Observacao": "Cliente Gerado Automáticamente - Afiliado",
         "ObservacaoFiscal": "",
         "PerfilFornecedor": "",
         "PrazoLimiteCredito": "",
-        "TipoPessoa": tipo,
+        "TipoPessoa": tipo,         # "F" ou "J"
         "Mei": False,
         "Sexo": "",
+
+        # E-mails
         "CadastroGeralEmail": [
             {
-                "Id": 0,
-                "TipoCadastroId": 1,
+                "Id": 8,
+                "TipoCadastroId": 8,
                 "Principal": True,
-                "Email": usuario_data.get("email"),
+                "Email": usuario_data["email"]
             }
         ],
+
+        # Endereço
         "CadastroGeralEndereco": [
             {
                 "Id": 0,
-                "Municipio": usuario_data.get("cidade"),
-                "Estado": usuario_data.get("estado"),
+                "Municipio": usuario_data["cidade"],
+                "Estado": usuario_data["estado"],
                 "PaisId": 0,
                 "Identificador": "",
-                "Logradouro": usuario_data.get("endereco"),
-                "Numero": usuario_data.get("numero"),
-                "Bairro": usuario_data.get("bairro"),
+                "Logradouro": usuario_data["endereco"],
+                "Numero": usuario_data["numero"],
+                "Bairro": usuario_data["bairro"],
                 "Complemento": "",
-                "Cep": usuario_data.get("cep"),
+                "Cep": usuario_data["cep"],
                 "Principal": True,
                 "Entrega": True,
                 "Retirada": True,
                 "Cobranca": True,
-                "Observacao": "Cadastro automático Painel Afiliados",
+                "Observacao": "Cadastro automático"
             }
         ],
+
+        # Telefone
         "CadastroGeralTelefone": [
             {
-                "Id": 0,
-                "TipoCadastroId": 1,
+                "Id": 8,
+                "TipoCadastroId": 8,
                 "Nome": "",
                 "Principal": True,
-                "Telefone": usuario_data.get("telefone") or "",
+                "Telefone": usuario_data.get("telefone") or ""
             }
         ],
+
+        # Tabela de preços (permissão / principal)
         "TabelaPrecoPermissaoVinculo": [
             {
                 "Id": 1,
-                "Nome": "string",
-                "Identificador": "string",
+                "Nome": "",
+                "Identificador": "",
                 "MostrarPrecoLojaVirtual": True,
-                "Padrao": True,
+                "Padrao": True
             }
         ],
         "TabelaPrecoPrincipal": {},
-        "CondicaoPagamentoBloqueado": [],
+
+        # Condições de pagamento bloqueadas (nenhuma, por enquanto)
+        "CondicaoPagamentoBloqueado": [
+            {
+                "Id": 1,
+                "Nome": "string"
+            }
+          ],
+        # Tipo de cliente
         "TipoCliente": [
             {
                 "Id": 1,
-                "Nome": "CLIENTE",
+                "Nome": "Cliente"
             }
         ],
-        # aqui eu já mando 91 que é o id que aparece no seu cadastro exemplo
+
+        # Uso da mercadoria
         "UsoMercadoriaConstanteFiscal": {
-            "Id": 91
-        },
+            "Id": 0
+        }
     }
 
-    data = _put_json(EP_PESSOA, payload)
-    pessoa_id = data.get("Id") or data.get("id") or data.get("intId")
+    resp = requests.put(url, headers=headers, json=payload, timeout=20)
+    resp.raise_for_status()
+
+    data = resp.json()
+    inner = data.get("data") or data
+    pessoa_id = inner.get("Id") or inner.get("intId") or inner.get("id")
 
     if not pessoa_id:
-        raise RuntimeError(
-            f"Resposta da REIN ao cadastrar pessoa não retornou Id: {data}"
-        )
+        raise RuntimeError(f"Falha ao obter ID ao criar pessoa na Rein: {data}")
 
     return int(pessoa_id)
+
 
