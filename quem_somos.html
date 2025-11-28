@@ -116,17 +116,17 @@
           </div>
         </div>
 
-        <nav class="hidden md:flex items-center gap-8 text-sm font-medium">
-          <button id="openLoginModal" class="text-slate-400 hover:text-sky-400 transition flex items-center gap-2 group">
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <!-- BOTÃO LOGIN (Link sutil) -->
+          <button id="openLoginModal" class="text-slate-400 hover:text-white transition flex items-center gap-2 group px-2 py-1">
             <i data-lucide="log-in" class="w-4 h-4 group-hover:stroke-sky-400 transition"></i>
             Login
           </button>
-          <a href="cadastro.html" class="text-slate-400 hover:text-sky-400 transition flex items-center gap-2 group">
-            <i data-lucide="user-plus" class="w-4 h-4 group-hover:stroke-sky-400 transition"></i>
-            Cadastro
-          </a>
-          <a href="painel.html" class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-200 hover:bg-slate-800 hover:text-white transition text-xs">
-            Painel Afiliado
+          
+          <!-- BOTÃO CADASTRO (Botão Primário Destacado) -->
+          <a href="cadastro.html" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white shadow-lg shadow-sky-900/30 transition transform hover:-translate-y-0.5 active:scale-95 text-xs font-semibold tracking-wide border border-sky-500/50">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Criar Cadastro
           </a>
         </nav>
       </div>
