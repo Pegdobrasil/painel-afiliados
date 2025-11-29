@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Validação de acesso - Painel Afiliados</title>
+  <script src="auth.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 24px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Validando seu acesso...</h1>
+  <p id="msg">Aguarde um instante.</p>
+
+  <script>
+    (async function () {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      const token = params.get("token");
+
+      const msgEl = document.getElementById("msg");
+
+      if (!id || !token) {
+        msgEl.textContent = "Link inválido. Verifique se o endereço está correto.";
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/auth/verify-email?id=${encodeURIComponent(
+            id
+          )}&token=${encodeURIComponent(token)}`
+        );
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          msgEl.textContent =
+            (data && data.detail) ||
+            "Não foi possível validar seu acesso. Tente novamente.";
+          return;
+        }
+
+        msgEl.textContent =
+          (data && data.message) ||
+          "Conta verificada com sucesso. Você já pode fazer login.";
+
+        // Opcional: redirecionar para login depois de alguns segundos
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 4000);
+      } catch (e) {
+        console.error(e);
+        msgEl.textContent = "Erro de conexão ao validar seu acesso.";
+      }
+    })();
+  </script>
+</body>
+</html>
