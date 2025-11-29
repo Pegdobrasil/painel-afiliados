@@ -1,5 +1,31 @@
 const API_BASE = "https://painel-afiliados-production.up.railway.app/api";
 
+(function () {
+  const raw = localStorage.getItem("painel_afiliado_session");
+  if (!raw) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  let session = null;
+  try {
+    session = JSON.parse(raw);
+  } catch (e) {
+    console.error(e);
+    window.location.href = "index.html";
+    return;
+  }
+
+  if (!session || !session.token || !session.id) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  // Aqui você pode, se quiser, usar session.token em chamadas futuras de API
+  // via header, por exemplo:
+  // fetch(url, { headers: { "X-API-Token": session.token } });
+})();
+
 // ===============================
 // SESSÃO E MENSAGENS
 // ===============================
