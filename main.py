@@ -6,10 +6,10 @@ import secrets
 import string
 import re
 
-from .database import get_db, Base, engine
-from .models import Usuario
+from server.database import get_db, Base, engine
+from serve.models import Usuario
 from . import schemas
-from .email_config import send_email
+from server.email_config import send_email
 import rein_client
 
 # Garante que a tabela exista
@@ -439,3 +439,4 @@ def recover(data: schemas.PasswordReset, db: Session = Depends(get_db)):
         "status": "ok",
         "message": "Senha redefinida. Agora faça login com a nova senha.",
     }
+
