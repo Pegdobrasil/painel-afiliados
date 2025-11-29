@@ -305,3 +305,18 @@ def recover(data: schemas.PasswordReset, db: Session = Depends(get_db)):
     enviar_email_senha_alterada(usuario)
 
     return {"status": "success", "message": "Senha redefinida."}
+
+@router.get("/test-email")
+def test_email(to: str, db: Session = Depends(get_db)):
+    """
+    Rota simples para testar envio de e-mail.
+    Exemplo:
+    GET /api/auth/test-email?to=seuemail@dominio.com
+    """
+    html = f"""
+    <h1>Teste de E-mail - Painel Afiliados</h1>
+    <p>Este é um envio de teste para <strong>{to}</strong>.</p>
+    """
+    send_email(to_email=to, subject="Teste Painel Afiliados", html_body=html)
+    return {"status": "ok", "message": f"E-mail de teste enviado para {to} (se tudo der certo)." }
+
