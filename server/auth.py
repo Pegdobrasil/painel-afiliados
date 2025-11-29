@@ -356,7 +356,6 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
             f"[WARN] Falha ao sincronizar usuário {usuario.email} com Rein no login: {e}"
         )
 
-# Garante que o usuário tem um token fixo de navegação
 if hasattr(usuario, "api_token") and not usuario.api_token:
     usuario.api_token = gerar_api_token()
     db.commit()
