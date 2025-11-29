@@ -6,9 +6,9 @@ import secrets
 import string
 import re
 
-from .database import get_db, Base, engine
-from .models import Usuario
-from . import schemas
+from server.database import get_db, Base, engine
+from server.models import Usuario
+from . import server.schemas
 from .email_config import send_email
 import rein_client
 
