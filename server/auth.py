@@ -19,6 +19,16 @@ router = APIRouter()
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
+def gerar_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def gerar_verification_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def gerar_api_token() -> str:
+    return secrets.token_hex(32)
 
 # =====================================================
 # Helpers de senha
@@ -49,10 +59,83 @@ def criar_reset_para_usuario(usuario: Usuario, minutos: int = 60) -> None:
 # =====================================================
 # Helpers de e-mail
 # =====================================================
-
 FRONT_RESET_URL = "https://pegdobrasil.github.io/painel-afiliados/trocar_senha.html"
+FRONT_VERIFY_URL = "https://pegdobrasil.github.io/painel-afiliados/validar.html"
 
+def enviar_email_verificacao(usuario: Usuario) -> None:
+    """
+    Manda o link para validar o cadastro (primeiro acesso).
+    Usa o campo verification_token do usuário.
+    """
+    if not getattr(usuario, "verification_token", None):
+        usuario.verification_token = gerar_verification_token()
+        usuario.verification_token_expires_at = datetime.utcnow() + timedelta(days=7)
 
+    link = f"{FRONT_VERIFY_URL}?id={usuario.id}&token={usuario.verification_token}"
+
+    html = f"""
+    <p>Olá, {usuario.nome}!</p>
+    <p>Para ativar seu acesso ao <strong>Painel de Afiliados PEG do Brasil</strong>,
+    clique no link abaixo:</p>
+
+    <p><a href="{link}">{link}</a></p>
+
+    <p>Este link é válido por 7 dias.</p>
+    <p>Se você não solicitou este cadastro, ignore esta mensagem.</p>
+    """
+
+    try:
+        send_email(
+            to_email=usuario.email,
+            subject="Ative seu acesso - Painel de Afiliados PEG do Brasil",
+            html_body=html,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao enviar e-mail de verificação: {e}")
+
+from fastapi import Query
+
+@router.get("/verify-email")
+def verify_email(
+    id: int = Query(...),
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == id).first()
+
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado.")
+
+    if not getattr(usuario, "verification_token", None):
+        raise HTTPException(status_code=400, detail="Conta já verificada ou token inválido.")
+
+    if usuario.verification_token != token:
+        raise HTTPException(status_code=400, detail="Token de verificação inválido.")
+
+    if getattr(usuario, "verification_token_expires_at", None) and \
+       usuario.verification_token_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Token de verificação expirado.")
+
+    # Marca como ativo e limpa o token de verificação
+    usuario.ativo = True
+    usuario.verification_token = None
+    usuario.verification_token_expires_at = None
+
+    # Garante que possui api_token (se não tiver por algum motivo)
+    if hasattr(usuario, "api_token") and not usuario.api_token:
+        usuario.api_token = gerar_api_token()
+
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "status": "success",
+        "message": "Conta verificada com sucesso. Agora você já pode acessar o painel.",
+        "id": usuario.id,
+        "email": usuario.email,
+        "api_token": getattr(usuario, "api_token", None),
+    }
+        
 def enviar_email_link_reset(usuario: Usuario) -> None:
     if not getattr(usuario, "reset_token", None):
         criar_reset_para_usuario(usuario)
@@ -170,7 +253,7 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
                 detail=f"Erro ao criar cliente na Rein: {e}",
             )
 
-    # Cria usuário local usando a senha informada
+    # Cria usuário local
     usuario = Usuario(
         tipo_pessoa=data.tipo_pessoa,
         cpf_cnpj=documento,
@@ -190,18 +273,26 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 
     # Campos opcionais (se existirem no modelo)
     if hasattr(usuario, "ativo"):
-        usuario.ativo = True
+        usuario.ativo = False  # só ativa após validar o link
+
+    # Gera token de verificação e (opcional) token de navegação
+    if hasattr(usuario, "verification_token"):
+        usuario.verification_token = gerar_verification_token()
+        usuario.verification_token_expires_at = datetime.utcnow() + timedelta(days=7)
+
+    if hasattr(usuario, "api_token"):
+        usuario.api_token = gerar_api_token()
 
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
 
-    # Tenta enviar e-mail de boas-vindas, sem derrubar a rota
-    enviar_email_boas_vindas(usuario)
+    # Manda e-mail com link de verificação
+    enviar_email_verificacao(usuario)
 
     return {
         "status": "success",
-        "message": "Cadastro realizado com sucesso!",
+        "message": "Cadastro realizado. Enviamos um link para ativação no seu e-mail.",
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
@@ -265,17 +356,63 @@ def login(data: schemas.Login, db: Session = Depends(get_db)):
             f"[WARN] Falha ao sincronizar usuário {usuario.email} com Rein no login: {e}"
         )
 
-    token = secrets.token_hex(32)
+# Garante que o usuário tem um token fixo de navegação
+if hasattr(usuario, "api_token") and not usuario.api_token:
+    usuario.api_token = gerar_api_token()
+    db.commit()
+    db.refresh(usuario)
+
+return {
+    "status": "success",
+    "token": getattr(usuario, "api_token", None),
+    "id": usuario.id,
+    "nome": usuario.nome,
+    "email": usuario.email,
+    "rein_pessoa_id": usuario.rein_pessoa_id,
+}
+
+from fastapi import Query
+
+@router.get("/verify-email")
+def verify_email(
+    id: int = Query(...),
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    usuario = db.query(Usuario).filter(Usuario.id == id).first()
+
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado.")
+
+    if not getattr(usuario, "verification_token", None):
+        raise HTTPException(status_code=400, detail="Conta já verificada ou token inválido.")
+
+    if usuario.verification_token != token:
+        raise HTTPException(status_code=400, detail="Token de verificação inválido.")
+
+    if getattr(usuario, "verification_token_expires_at", None) and \
+       usuario.verification_token_expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Token de verificação expirado.")
+
+    # Marca como ativo e limpa o token de verificação
+    usuario.ativo = True
+    usuario.verification_token = None
+    usuario.verification_token_expires_at = None
+
+    # Garante que possui api_token (se não tiver por algum motivo)
+    if hasattr(usuario, "api_token") and not usuario.api_token:
+        usuario.api_token = gerar_api_token()
+
+    db.commit()
+    db.refresh(usuario)
 
     return {
         "status": "success",
-        "token": token,
+        "message": "Conta verificada com sucesso. Agora você já pode acessar o painel.",
         "id": usuario.id,
-        "nome": usuario.nome,
         "email": usuario.email,
-        "rein_pessoa_id": usuario.rein_pessoa_id,
+        "api_token": getattr(usuario, "api_token", None),
     }
-
 
 
 # =====================================================
