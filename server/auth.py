@@ -8,7 +8,7 @@ import re
 
 from server.database import get_db, Base, engine
 from server.models import Usuario
-from . import server.schemas
+from server. import schemas
 from .email_config import send_email
 import rein_client
 
