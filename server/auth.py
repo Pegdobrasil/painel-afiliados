@@ -157,19 +157,90 @@ def register_user(data: schemas.UsuarioCreate, db: Session = Depends(get_db)):
 def login(data: schemas.Login, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == data.email).first()
 
-    if not usuario or not verificar_senha(data.senha, usuario.senha_hash):
-        raise HTTPException(400, "Usuário ou senha inválidos.")
+    if not usuario:
+        # Usuário não existe
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
 
-    if not usuario.ativo:
-        raise HTTPException(403, "Usuário ainda não ativado. Verifique seu e-mail.")
+    # Se tiver campo 'ativo' e estiver falso, reenvia o link de ativação
+    if getattr(usuario, "ativo", True) is False:
+        # Se não tiver token, ou se já estiver expirado, gera um novo
+        expired = (
+            getattr(usuario, "verification_token_expires_at", None)
+            and usuario.verification_token_expires_at < datetime.utcnow()
+        )
+
+        if not getattr(usuario, "verification_token", None) or expired:
+            usuario.verification_token = gerar_verification_token()
+            usuario.verification_token_expires_at = datetime.utcnow() + timedelta(days=7)
+            db.commit()
+            db.refresh(usuario)
+
+        # Tenta reenviar o e-mail de verificação
+        try:
+            enviar_email_verificacao(usuario)
+        except Exception as e:
+            print(f"[WARN] Falha ao reenviar e-mail de verificação no login: {e}")
+
+        # Bloqueia o login com uma mensagem clara
+        raise HTTPException(
+            status_code=403,
+            detail="Conta ainda não ativada. Reenviamos o link de ativação para o seu e-mail."
+        )
+
+    # Senha inválida
+    if not verificar_senha(data.senha, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Usuário ou senha inválidos.")
+
+    # ========================================
+    # Sincroniza / valida vínculo com pessoa na Rein
+    # ========================================
+    try:
+        documento = usuario.cpf_cnpj  # está salvo só com dígitos no banco
+        pessoa_id = rein_client.buscar_pessoa_por_documento(documento)
+
+        if pessoa_id:
+            # Já existe na Rein → garante que o vínculo está correto
+            if usuario.rein_pessoa_id != int(pessoa_id):
+                usuario.rein_pessoa_id = int(pessoa_id)
+                db.commit()
+                db.refresh(usuario)
+        else:
+            # Não existe na Rein -> cria agora usando os dados do usuário do painel
+            novo_id = rein_client.criar_cliente_rein(
+                {
+                    "cpf_cnpj": documento,
+                    "tipo_pessoa": usuario.tipo_pessoa,
+                    "nome": usuario.nome,
+                    "email": usuario.email,
+                    "telefone": usuario.telefone,
+                    "cep": usuario.cep,
+                    "endereco": usuario.endereco,
+                    "numero": usuario.numero,
+                    "bairro": usuario.bairro,
+                    "cidade": usuario.cidade,
+                    "estado": usuario.estado,
+                }
+            )
+            usuario.rein_pessoa_id = int(novo_id)
+            db.commit()
+            db.refresh(usuario)
+    except Exception as e:
+        # Nunca derruba o login por causa de problema de integração
+        print(
+            f"[WARN] Falha ao sincronizar usuário {usuario.email} com Rein no login: {e}"
+        )
+
+    token = secrets.token_hex(32)
 
     return {
         "status": "success",
-        "token": usuario.api_token,
+        "token": token,
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
+        "rein_pessoa_id": usuario.rein_pessoa_id,
     }
+
 
 # ============================================================
 # ROTA: VERIFICAR EMAIL
