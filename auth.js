@@ -92,9 +92,13 @@ async function registrar() {
     }
 
     const data = await res.json().catch(() => null);
-    notify((data && data.message) || "Cadastro realizado com sucesso!");
-    // Após o aviso, redireciona para o login
-    window.location.href = "index.html";
+notify(
+  (data && data.message) ||
+    "Cadastro realizado. Enviamos um link de ativação para o seu e-mail."
+);
+// Depois de avisar, redireciona para o login
+window.location.href = "index.html";
+
   } catch (err) {
     console.error(err);
     notify("Erro de conexão ao tentar cadastrar.");
